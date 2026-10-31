@@ -578,25 +578,32 @@ static void forSection(const cJSON* root, const char* name, Fn fn)
 	logf("game: %s read, heap used %d KB", name, mallinfo().uordblks / 1024);
 }
 
-static const cJSON* section(const cJSON* root, const char* name)
+// Calls fn(section) with the section's whole node, once per part when the converter split it (its members
+// are spread over the parts). fn must be done with the node before returning: the next part's file replaces
+// the parsed one. forSection walks a section's members; this one is for sections whose members are of
+// different kinds (firstperson's races / vfx / items, ui's theme), which no member-by-member walk can read.
+template <typename Fn>
+static void forSectionWhole(const cJSON* root, const char* name, Fn fn)
 {
-	sectionDone();
 	if (const cJSON* v = cJSON_GetObjectItemCaseSensitive(root, name))
-		return v;
-	std::string path = s_dataDir + "/game_" + name + ".json";
-	size_t size = 0;
-	char* text = zreadAll(path.c_str(), &size);
-	if (!text)
-		return nullptr;
-	s_section = cJSON_Parse(text);
-	free(text);
-	if (!s_section)
 	{
-		logf("game: %s: JSON parse error", path.c_str());
-		return nullptr;
+		fn(v);
+		return;
 	}
-	logf("game: %s (%u KB), heap used %d KB", name, (unsigned)(size / 1024), mallinfo().uordblks / 1024);
-	return cJSON_GetObjectItemCaseSensitive(s_section, name);
+	if (const cJSON* v = sectionFile(name, name))
+	{
+		fn(v);
+		sectionDone();
+		return;
+	}
+	for (int k = 0;; k++)
+	{
+		const cJSON* v = sectionFile(std::string(name) + "_" + std::to_string(k), name);
+		if (!v)
+			break;
+		fn(v);
+	}
+	sectionDone();
 }
 
 // The long texts gameLoad hands CardText::store, in the same order (objects, dialogue, journal): the card's copy is
@@ -1033,8 +1040,7 @@ bool gameLoad(GameData& g, const char* path)
 		}
 	}
 
-	if (const cJSON* ui = section(root, "ui"))
-		parseUiTheme(ui, g.ui);
+	forSectionWhole(root, "ui", [&](const cJSON* ui) { parseUiTheme(ui, g.ui); });
 
 	const cJSON* ts;
 	if (const cJSON* wt = cJSON_GetObjectItem(root, "weather"))
@@ -1233,7 +1239,7 @@ bool gameLoad(GameData& g, const char* path)
 			}
 		d.sunrise = num(sb, "sunrise", 6); d.sunset = num(sb, "sunset", 18);
 	}
-	if (const cJSON* fp = section(root, "firstperson"))
+	forSectionWhole(root, "firstperson", [&](const cJSON* fp)
 	{
 		const cJSON* race;
 		cJSON_ArrayForEach(race, cJSON_GetObjectItem(fp, "races"))
@@ -1310,7 +1316,7 @@ bool gameLoad(GameData& g, const char* path)
 			cJSON_ArrayForEach(slot, cJSON_GetObjectItem(item, "slots"))
 				fi.slots[atoi(slot->string)] = { cJSON_GetArrayItem(slot, 0)->valuestring, cJSON_GetArrayItem(slot, 1)->valuestring };
 		}
-	}
+	});
 
 	const cJSON* lu;
 	cJSON_ArrayForEach(lu, cJSON_GetObjectItem(root, "levelup"))
@@ -1403,12 +1409,11 @@ bool gameLoadUiTheme(const char* path, UiThemeDef& t)
 	if (!root)
 		return false;
 	bool ok = false;
-	if (const cJSON* ui = section(root, "ui"))
+	forSectionWhole(root, "ui", [&](const cJSON* ui)
 	{
 		parseUiTheme(ui, t);
 		ok = !t.fontFile.empty();
-	}
-	sectionDone();
+	});
 	cJSON_Delete(root);
 	return ok;
 }
