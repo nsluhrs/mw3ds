@@ -9,6 +9,9 @@
                                                     (build_cia_mods.py is the same as --mods)
     python tools/build/build_cia.py --no-data       the program only in the CIA (~2 MB); the data stays in out/... for
                                                     copying to sdmc:/3ds/mw3ds/data
+    python tools/build/build_cia.py --data out/exp  a different data folder (the expansions: convert it with
+                                                    MW3DS_EXPANSIONS=1 MW3DS_OUT=out/exp, then pack it here); the CIA
+                                                    is named after it, build/mw3ds-exp.cia
     python tools/build/build_cia.py --prebuilt      pack the mw3ds.elf / mw3ds.smdh already in the repo root instead of
                                                     building them (the release converter, tools/release, uses this)
 Needs .env filled in (see .env.example): MW3DS_MORROWIND_DIR, MW3DS_CTR_TOOLS_DIR, and on Windows MW3DS_MSYS2_DIR
@@ -111,7 +114,8 @@ def fetch_mods(old3ds=False):
     return dirs
 
 
-def run(small=False, skip_convert=False, old3ds=False, mods=False, fetch_only=False, no_data=False, prebuilt=False):
+def run(small=False, skip_convert=False, old3ds=False, mods=False, fetch_only=False, no_data=False, prebuilt=False,
+        data_dir=""):
     os.chdir(ROOT)
     mwtools.load_env()
     if mods:
@@ -131,12 +135,15 @@ def run(small=False, skip_convert=False, old3ds=False, mods=False, fetch_only=Fa
     if not (ctr / ("makerom.exe" if mwtools.IS_WINDOWS else "makerom")).exists():
         raise SystemExit(f"makerom not found in {ctr}")
 
-    data = "out/o3ds" if old3ds else "out/data"
-    cia = "build/mw3ds-o3ds.cia" if old3ds else "build/mw3ds.cia"
+    data = data_dir or ("out/o3ds" if old3ds else "out/data")
+    cia = f"build/mw3ds-{Path(data).name}.cia" if data_dir else ("build/mw3ds-o3ds.cia" if old3ds else "build/mw3ds.cia")
     convert_args = [] if small else ["--world"]
     if old3ds:
         convert_args += ["--max-tex", "128"]
         os.environ["MW3DS_OUT"] = "out/o3ds"
+    if data_dir:
+        # the converter writes where the CIA will read from (MW3DS_EXPANSIONS=1 in the environment adds Tribunal and Bloodmoon)
+        os.environ["MW3DS_OUT"] = data
 
     # A CIA left by an earlier failed build must not be mistaken for this one
     (ROOT / cia).unlink(missing_ok=True)
@@ -176,8 +183,11 @@ def main(mods=False):
     ap.add_argument("--fetch-only", action="store_true", help="with --mods: just download the mods and print the overlay folders")
     ap.add_argument("--no-data", action="store_true")
     ap.add_argument("--prebuilt", action="store_true")
+    ap.add_argument("--data", default="", metavar="DIR", help="pack this data folder (default out/data, out/o3ds with --old3ds); "
+                    "the CIA is named after it")
     a = ap.parse_args()
-    return run(a.small, a.skip_convert, a.old3ds, mods or getattr(a, "mods", False), a.fetch_only, a.no_data, a.prebuilt)
+    return run(a.small, a.skip_convert, a.old3ds, mods or getattr(a, "mods", False), a.fetch_only, a.no_data, a.prebuilt,
+               a.data)
 
 
 if __name__ == "__main__":
