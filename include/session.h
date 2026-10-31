@@ -550,6 +550,26 @@ struct Session : ScriptHost
 	bool hurtFlashOngoing() { if (hurtFlash > 0.0f) return false; hurtFlash = 1.0f; return true; }
 	void sheathe() override { sheatheTimer = 99.0f; }
 	void goToJail() override;
+	// GetWeaponType / IsWerewolf / BecomeWerewolf / UndoWerewolf (Tribunal and Bloodmoon)
+	int playerWeaponType() override
+	{
+		// OpenMW's GetWeaponType: what the right hand holds, out or not (a lockpick -2, a probe -3, nothing -1)
+		if (const Object* wpn = playerWeapon())
+			return wpn->subtype;
+		const InventoryItem* tool = playerToolItem();
+		if (!tool)
+			return -1;
+		const Object* o = w.game.object(tool->id);
+		return o && o->type == "LOCK" ? -2 : o && o->type == "PROB" ? -3 : -1;
+	}
+	bool isWerewolf() override { return werewolf; }
+	// The form: what it refuses (OpenMW's sWerewolfRefusal), and the kills counted in it start again
+	void setWerewolf(bool on) override
+	{
+		werewolf = on;
+		if (on)
+			w.werewolfKills = 0;
+	}
 	void teleportPlayer(int cell, const float pos[3], float yaw) override
 	{
 		if (cell == w.current || (!w.cells[cell].interior && !w.cells[w.current].interior))

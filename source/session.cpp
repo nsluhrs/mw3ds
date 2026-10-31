@@ -704,6 +704,8 @@ void Session::saveSettings()
 // Called by the main loop after it has shown the loading screen
 void Session::finishTravel()
 {
+	// GetPCTraveling has this frame to see the journey (OpenMW's mPlayerTraveling)
+	w.pcTraveling = true;
 	int dest = travelCell;
 	travelCell = -1;
 	if (g_profile.cleanAtDoors)
@@ -1119,7 +1121,9 @@ void Session::update(const PlayerInput& inRaw, float dt)
 		in.sneak = true;
 	w.player.waterWalk = w.effectTotal(2) > 0.0f;
 	w.player.slowFall = w.effectTotal(11) > 0.0f;
-	w.player.levitate = w.effectTotal(10);
+	// EnableLevitation / DisableLevitation: the effect is still there, it just lifts nothing (OpenMW's
+	// mLevitationEnabled)
+	w.player.levitate = w.levitationDisabled ? 0.0f : w.effectTotal(10);
 	w.player.swimBoost = w.effectTotal(1);
 	// Encumbrance: the load (plus Burden, less Feather) against fEncumbranceStrMult x Strength; over it
 	// the player can't move, under it the load slows them (fEncumberedMoveEffect)
@@ -1335,6 +1339,10 @@ void Session::update(const PlayerInput& inRaw, float dt)
 	profAdd(PROF_OTHER, t);
 	MARK("scripts");
 	scriptsRun(w, *this, dt);
+	// GetPCinJail / GetPCTraveling: the session sets one when it jails the player or moves them with a travel
+	// service, and the scripts have the one frame after it to notice (OpenMW's World::update resets them)
+	w.pcJail = false;
+	w.pcTraveling = false;
 	profAdd(PROF_SCRIPTS, t);
 	if (!menuOpen())
 	{
@@ -2113,7 +2121,9 @@ void Session::updateSky()
 			mb.dir[k] = moonDir[m][k];
 		mb.size = 0.5f * 450.0f * md.size / 125.0f * 2.7f;
 		mb.tex = skyTex(m == 0 ? sky.masser[phase] : sky.secunda[phase]);
-		mb.rgba = 0x00FFFFFF | ((u32)(alpha * 255) << 24);
+		// TurnMoonRed: Masser goes the colour of blood (OpenMW changes its picture; ours tints the one it has).
+		// The vertex colour is 0xAABBGGRR
+		mb.rgba = (m == 0 && w.moonRed ? 0x00505AFFu : 0x00FFFFFFu) | ((u32)(alpha * 255) << 24);
 		g_skyBillboards.push_back(mb);
 	}
 	// the stars: from an hour after sunset to two before sunrise, fading over two hours

@@ -486,6 +486,9 @@ void Session::killNpc(int ri, bool byPlayer)
 	}
 	r.dead = r.died = true;
 	w.deadCounts[r.idLower]++;
+	// GetWerewolfKills: what the player killed in the werewolf form since the last change (OpenMW's mWerewolfKills)
+	if (byPlayer && werewolf)
+		w.werewolfKills++;
 	r.health = 0.0f;
 	r.ai = AI_IDLE;
 	r.hitAt = -1.0f;

@@ -97,6 +97,7 @@ struct Ref
 	std::vector<ContentItem> contents;   // containers: count, item id, and each stack's wear / soul / charge
 
 	bool enabled = true;          // Enable / Disable
+	bool deleted = false;         // SetDelete: gone for good, and stays gone when the cell is read again
 	bool pickedUp = false;        // taken into the inventory
 	float doorAngle = 0.0f, doorTarget = 0.0f;
 	int script = -1;              // index into World::scripts
@@ -501,7 +502,19 @@ struct World
 	bool useTorches() const;                      // dark and not precipitating
 	int nightDay() const;                         // 0 default, 1 interior in daylight, 2 exterior at night
 	bool underWater(float z) const;               // below the water of a loaded cell
+	float waterLevel(int cell) const;             // that cell's water: the level a script set, else the one it was baked with
 	bool teleportDisabled = false;
+	// Tribunal / Bloodmoon scripts: EnableLevitation / DisableLevitation (Levitate lifts nothing while off),
+	// TurnMoonRed / TurnMoonWhite (Masser's colour), SetWaterLevel / ModWaterLevel (an interior's water level,
+	// which stays with the cell), GetWerewolfKills (the kills made in werewolf form)
+	bool levitationDisabled = false;
+	bool moonRed = false;
+	std::unordered_map<int, float> waterLevels;   // cell index -> the level a script set it to
+	int werewolfKills = 0;
+	// GetPCinJail / GetPCTraveling (OpenMW's mPlayerInJail / mPlayerTraveling): the session sets one when it jails
+	// the player or moves them with a travel service, and the frame's scripts have that one frame to notice it
+	// (OpenMW's World::update clears both before anything else runs)
+	bool pcJail = false, pcTraveling = false;
 	bool aiEnabled = true;            // ToggleAI (the console): off, actors stand still
 	// (no longer written: ClearInfoActor only edits the Topics index) "actor id|info uid"
 	std::unordered_set<std::string> clearedInfos;
@@ -570,6 +583,9 @@ struct World
 	void sunSide(float out[4]) const;
 	// Places `count` of an id `dist` in front of (dir 0), behind (1), left of (2) or right of (3) a spot
 	void placeAt(const std::string& id, int count, float dist, int dir, const float base[3], float yaw);
+	// PlaceItem / PlaceItemCell: the object at this spot in that cell ("" for the one the player is in); one that
+	// isn't in memory gets it when it is read, as a dropped item or a placed creature does
+	void placeItem(const std::string& cell, const std::string& id, const float pos[3], float zrot);
 	void snapToFloor(float pos[3]);     // down onto the floor below (from a little above), never up
 	// How far above where it stands (the ground under its feet) a creature's model is drawn: its collision box rested on
 	// the highest ground under all of it (0 without a box)
@@ -643,6 +659,7 @@ struct World
 	void postChargenRef(Ref& r);
 	int findActorRef(int actor) const;
 	void setEnabled(int ref, bool enabled);
+	void deleteRef(int ref, bool gone);         // SetDelete: hidden and inert, and remembered as gone
 	void pickUp(int ref);
 	int itemCount(const std::string& id) const;
 	void addItem(const std::string& id, int count);

@@ -75,7 +75,20 @@
 	X(GETPLAYERLOOKINGDISABLED, "getplayerlookingdisabled") X(GETPLAYERMAGICDISABLED, "getplayermagicdisabled") \
 	X(GETPLAYERVIEWSWITCHDISABLED, "getplayerviewswitchdisabled") X(GETVANITYMODEDISABLED, "getvanitymodedisabled") \
 	X(GOTOJAIL, "gotojail") X(RAISERANK, "raiserank") X(LOWERRANK, "lowerrank") X(HASSOULGEM, "hassoulgem") \
-	X(REMOVESOULGEM, "removesoulgem") X(GETCURRENTWEATHER, "getcurrentweather") X(GETPOS_, "getposition") X(FALL, "fall") 	X(COC, "coc") X(CENTERONCELL, "centeroncell") X(COE, "coe") X(CENTERONEXTERIOR, "centeronexterior") 	X(TGM, "tgm") X(TOGGLEGODMODE, "togglegodmode") X(TAI, "tai") X(TOGGLEAI, "toggleai") X(SV, "sv") 	X(SHOWVARS, "showvars") X(ORI, "ori") X(OUTPUTREFINFO, "outputrefinfo") X(BC, "bc") X(BETACOMMENT, "betacomment") 	X(HELP, "help") X(FILLJOURNAL, "filljournal") X(FILLMAP, "fillmap")
+	X(REMOVESOULGEM, "removesoulgem") X(GETCURRENTWEATHER, "getcurrentweather") X(GETPOS_, "getposition") X(FALL, "fall") 	X(COC, "coc") X(CENTERONCELL, "centeroncell") X(COE, "coe") X(CENTERONEXTERIOR, "centeronexterior") 	X(TGM, "tgm") X(TOGGLEGODMODE, "togglegodmode") X(TAI, "tai") X(TOGGLEAI, "toggleai") X(SV, "sv") 	X(SHOWVARS, "showvars") X(ORI, "ori") X(OUTPUTREFINFO, "outputrefinfo") X(BC, "bc") X(BETACOMMENT, "betacomment") 	X(HELP, "help") X(FILLJOURNAL, "filljournal") X(FILLMAP, "fillmap") \
+	X(GETSQUAREROOT, "getsquareroot") X(GETINTERIOR, "getinterior") X(GETSTAT, "getstat") \
+	X(GETPCSNEAKING, "getpcsneaking") X(GETWEAPONDRAWN, "getweapondrawn") X(GETWEAPONTYPE, "getweapontype") \
+	X(GETPCINJAIL, "getpcinjail") X(GETPCTRAVELING, "getpctraveling") X(GETCHAMELEON, "getchameleon") \
+	X(GETPARALYSIS, "getparalysis") X(ENABLELEVITATION, "enablelevitation") X(DISABLELEVITATION, "disablelevitation") \
+	X(MODRESISTFIRE, "modresistfire") X(MODRESISTFROST, "modresistfrost") X(MODRESISTSHOCK, "modresistshock") \
+	X(MODRESISTMAGICKA, "modresistmagicka") X(MODRESISTPOISON, "modresistpoison") X(MODRESISTPARALYSIS, "modresistparalysis") \
+	X(GETCOLLIDINGPC, "getcollidingpc") X(GETCOLLIDINGACTOR, "getcollidingactor") X(HURTCOLLIDINGACTOR, "hurtcollidingactor") \
+	X(GETSTANDINGACTOR, "getstandingactor") X(SETDELETE, "setdelete") X(SETSCALE, "setscale") \
+	X(GETWATERLEVEL, "getwaterlevel") X(SETWATERLEVEL, "setwaterlevel") X(MODWATERLEVEL, "modwaterlevel") \
+	X(PLACEITEM, "placeitem") X(PLACEITEMCELL, "placeitemcell") X(EXPLODESPELL, "explodespell") \
+	X(TURNMOONRED, "turnmoonred") X(TURNMOONWHITE, "turnmoonwhite") X(FACE, "face") \
+	X(ISWEREWOLF, "iswerewolf") X(BECOMEWEREWOLF, "becomewerewolf") X(UNDOWEREWOLF, "undowerewolf") \
+	X(GETWEREWOLFKILLS, "getwerewolfkills") X(SETWEREWOLFACROBATICS, "setwerewolfacrobatics")
 
 enum ScriptFunction
 {
@@ -1791,6 +1804,256 @@ static float call(Ctx& c, const Node& n)
 		return 0.0f;
 	case F_GETSOUNDPLAYING:
 		return c.host.soundPlaying(ref, argStr(c, n, 0)) ? 1.0f : 0.0f;
+	// ---- Tribunal and Bloodmoon
+	// GetSquareRoot n
+	case F_GETSQUAREROOT: return sqrtf(fmaxf(0.0f, argNum(c, n, 0)));
+	// GetInterior: the cell the player is in (the scripts that ask run globally and ask about the player)
+	case F_GETINTERIOR:
+		return w.current >= 0 && w.cells[w.current].interior ? 1.0f : 0.0f;
+	// GetStat "Name": one stat by its name. Vanilla's parser also takes the bare word (GetStat Level), which our
+	// compiler reads as a variable: its name is the stat. The same numbers the get<stat> functions give
+	case F_GETSTAT:
+	{
+		std::string stat;
+		if (!n.kids.empty())
+		{
+			const Node& a = n.kids[0];
+			stat = a.kind == N_STR || a.kind == N_LOCAL || a.kind == N_GLOBAL ? lower(a.a.str()) : lower(argStr(c, n, 0));
+		}
+		Node q = n;
+		q.b = "get" + stat;
+		q.func = F_UNKNOWN;
+		float v;
+		return statFunction(c, q, onPlayer, r, ref, &v) ? v : 0.0f;
+	}
+	case F_GETPCSNEAKING: return w.player.sneaking ? 1.0f : 0.0f;
+	case F_GETWEAPONDRAWN: return w.pcWeaponDrawn ? 1.0f : 0.0f;
+	// GetWeaponType: what the right hand holds, out or not (OpenMW: the weapon's class 0 short blade .. 9 staff,
+	// -2 a lockpick, -3 a probe, -1 nothing or not a weapon)
+	case F_GETWEAPONTYPE:
+		if (onPlayer || !r)
+			return (float)c.host.playerWeaponType();
+		if (r->actor >= 0)
+		{
+			const Object* wpn = w.game.object(w.game.actors[r->actor].weapon);
+			return wpn && wpn->type == "WEAP" ? (float)wpn->subtype : -1.0f;
+		}
+		return -1.0f;
+	// GetPCinJail / GetPCTraveling: the frame the session jailed the player or moved them with a travel service
+	// (OpenMW's flags, which its World::update clears at the start of every frame)
+	case F_GETPCINJAIL: return w.pcJail ? 1.0f : 0.0f;
+	case F_GETPCTRAVELING: return w.pcTraveling ? 1.0f : 0.0f;
+	// GetChameleon / GetParalysis: one magic effect's magnitude on them, whole (OpenMW's OpGetMagicEffect: what
+	// the Chameleon spell is worth, not whether the player is out of sight; Invisibility is its own effect)
+	case F_GETCHAMELEON: case F_GETPARALYSIS:
+	{
+		int e = magicEffectIndex(n.func == F_GETCHAMELEON ? "chameleon" : "paralyze");
+		float mag = onPlayer || !r ? w.effectTotal(e) : r->actor >= 0 ? w.actorEffect(ref, e) : 0.0f;
+		return (float)(int)mag;
+	}
+	// EnableLevitation / DisableLevitation (OpenMW's mLevitationEnabled): the Levitate effect lifts nothing while off
+	case F_ENABLELEVITATION: case F_DISABLELEVITATION:
+		w.levitationDisabled = n.func == F_DISABLELEVITATION;
+		return 0.0f;
+	// ModResistFire and its kin (OpenMW's modEffect): the resistance with no duration, so it stays until it is
+	// cured. Ours ticks its effects down, so these get a duration no playthrough runs out
+	case F_MODRESISTFIRE: case F_MODRESISTFROST: case F_MODRESISTSHOCK: case F_MODRESISTMAGICKA:
+	case F_MODRESISTPOISON: case F_MODRESISTPARALYSIS:
+	{
+		static const char* kResistNames[] = { "resistfire", "resistfrost", "resistshock", "resistmagicka",
+			"resistpoison", "resistparalysis" };
+		int e = magicEffectIndex(kResistNames[n.func - F_MODRESISTFIRE]);
+		float mag = argNum(c, n, 0);
+		if (e < 0)
+			return 0.0f;
+		if (onPlayer || !r || r->actor < 0)
+			w.effects.push_back({ e, -1, -1, mag, 1e9f });
+		else
+			r->effects.push_back({ e, mag, 1e9f });
+		return 0.0f;
+	}
+	// GetStandingActor: someone of the living stands on this object (as GetStandingPC does for the player)
+	case F_GETSTANDINGACTOR:
+	{
+		if (!r || !r->hasBox)
+			return 0.0f;
+		bool any = false;
+		w.forLoadedActors([&](int i) {
+			const Ref& a = w.refs[i];
+			if (a.dead || !a.visible() || a.actor < 0)
+				return;
+			if (a.pos[0] >= r->boxMin[0] && a.pos[0] <= r->boxMax[0] && a.pos[1] >= r->boxMin[1]
+				&& a.pos[1] <= r->boxMax[1] && fabsf(a.pos[2] - r->boxMax[2]) < 30.0f)
+				any = true;
+		});
+		return any ? 1.0f : 0.0f;
+	}
+	// GetCollidingPC / GetCollidingActor / HurtCollidingActor: whoever's body overlaps this object's box (OpenMW
+	// asks the physics system; ours takes the object's box and a body of the size projectiles aim at)
+	case F_GETCOLLIDINGPC: case F_GETCOLLIDINGACTOR: case F_HURTCOLLIDINGACTOR:
+	{
+		if (!r || !r->hasBox)
+			return 0.0f;
+		static const float kBodyRadius = 34.0f, kBodyHeight = 135.0f;    // (projectile.cpp's actor body)
+		auto overlaps = [&](const float* f) {
+			return f[0] + kBodyRadius >= r->boxMin[0] && f[0] - kBodyRadius <= r->boxMax[0]
+				&& f[1] + kBodyRadius >= r->boxMin[1] && f[1] - kBodyRadius <= r->boxMax[1]
+				&& f[2] + kBodyHeight >= r->boxMin[2] && f[2] <= r->boxMax[2];
+		};
+		bool pc = overlaps(w.player.feet);
+		if (n.func == F_GETCOLLIDINGPC)
+			return pc ? 1.0f : 0.0f;
+		if (n.func == F_GETCOLLIDINGACTOR)
+		{
+			bool any = false;
+			w.forLoadedActors([&](int i) {
+				const Ref& a = w.refs[i];
+				if (!a.dead && a.visible() && a.actor >= 0 && overlaps(a.pos))
+					any = true;
+			});
+			return any ? 1.0f : 0.0f;
+		}
+		// HurtCollidingActor n: health a second off everyone in the way, the player too (OpenMW's
+		// hurtCollidingActors); nothing while a menu is up
+		if (c.host.menuMode())
+			return 0.0f;
+		float rate = argNum(c, n, 0);
+		if (pc)
+		{
+			if (rate > 0.0f)
+				c.host.hurtPlayer(rate * c.dt);
+			else
+				w.stats.health = fminf(w.stats.healthMax, w.stats.health - rate * c.dt);
+		}
+		w.forLoadedActors([&](int i) {
+			Ref& a = w.refs[i];
+			if (i == ref || a.dead || !a.visible() || a.actor < 0 || !overlaps(a.pos))
+				return;
+			a.health = fminf(a.healthMax > 0.0f ? a.healthMax : a.health, a.health - rate * c.dt);
+			if (a.health <= 0.0f)
+				c.host.killActor(i);
+		});
+		return 0.0f;
+	}
+	// SetDelete 1 / 0: this object is gone for good (or back)
+	case F_SETDELETE:
+		if (r)
+			w.deleteRef(ref, argNum(c, n, 0) != 0.0f);
+		return 0.0f;
+	// SetScale n: the object's size (OpenMW's scaleObject, which scales the shape and its physics). Ours scales
+	// what the level baked for its collision box; the model itself is baked into the cell's geometry at its
+	// converted size, so it stays as it is
+	case F_SETSCALE:
+	{
+		float s = argNum(c, n, 0);
+		if (r && s > 0.0f && s != r->scale)
+		{
+			float k = s / r->scale;
+			r->scale = s;
+			if (r->hasBox)
+				for (int axis = 0; axis < 3; axis++)
+				{
+					r->boxMin[axis] = r->pos[axis] + (r->boxMin[axis] - r->pos[axis]) * k;
+					r->boxMax[axis] = r->pos[axis] + (r->boxMax[axis] - r->pos[axis]) * k;
+				}
+			logf("setscale: %s is %.2f times its size now, its model keeping the one the level baked",
+				r->id.c_str(), s);
+		}
+		return 0.0f;
+	}
+	// GetWaterLevel / SetWaterLevel / ModWaterLevel: an interior's water (Tribunal's Mournhold raises and drains
+	// it). OpenMW keeps the level with the cell; ours does too, and puts it back when the cell is read again
+	case F_GETWATERLEVEL:
+		return w.waterLevel(onPlayer || !r ? w.current : w.placeOf(ref));
+	case F_SETWATERLEVEL: case F_MODWATERLEVEL:
+	{
+		int cell = onPlayer || !r ? w.current : w.placeOf(ref);
+		float want = argNum(c, n, 0);
+		if (cell >= 0)
+		{
+			float now = w.waterLevel(cell);
+			w.waterLevels[cell] = n.func == F_SETWATERLEVEL ? want : now + want;
+			if (w.cells[cell].live)
+				w.cells[cell].live->cell.waterZ = w.waterLevels[cell];
+		}
+		return 0.0f;
+	}
+	// PlaceItem "id" x y z zrot / PlaceItemCell "id", "cell" x y z zrot: the object appears at that spot
+	case F_PLACEITEM: case F_PLACEITEMCELL:
+	{
+		std::string cell = n.func == F_PLACEITEMCELL ? argStr(c, n, 1) : "";
+		int k = n.func == F_PLACEITEMCELL ? 2 : 1;
+		float pos[3] = { argNum(c, n, k), argNum(c, n, k + 1), argNum(c, n, k + 2) };
+		w.placeItem(cell, argStr(c, n, 0), pos, argNum(c, n, k + 3) / 57.29578f);
+		return 0.0f;
+	}
+	// ExplodeSpell "id": the spell lands on it at once, as when a bolt hits (OpenMW's explodeSpell): what has an
+	// area reaches everyone in it, what hasn't only its target
+	case F_EXPLODESPELL:
+	{
+		auto sp = w.game.spells.find(lower(argStr(c, n, 0)));
+		if (sp == w.game.spells.end())
+			return 0.0f;
+		int caster = r && r->actor >= 0 ? ref : -1;
+		int who = onPlayer || !r ? -1 : ref;
+		for (auto& e : sp->second.effects)
+		{
+			if (!e.area)
+			{
+				c.host.castEffect(who, e, sp->second.name, caster, (float)sp->second.cost);
+				continue;
+			}
+			const float* at = onPlayer || !r ? w.player.feet : r->pos;
+			auto inArea = [&](const float* p) {
+				float dx = p[0] - at[0], dy = p[1] - at[1], dz = p[2] - at[2];
+				return dx * dx + dy * dy + dz * dz <= (float)e.area * e.area;
+			};
+			// The player, if they are in the same space and in the blast
+			if (onPlayer || !r || w.current == w.placeOf(ref)
+				|| (!w.cells[w.current].interior && !w.cells[w.placeOf(ref)].interior))
+				if (inArea(w.player.feet))
+					c.host.castEffect(-1, e, sp->second.name, caster, (float)sp->second.cost);
+			w.forLoadedActors([&](int i) {
+				const Ref& a = w.refs[i];
+				if (a.dead || !a.visible() || a.actor < 0 || !w.sameSpace(i, ref) || !inArea(a.pos))
+					return;
+				c.host.castEffect(i, e, sp->second.name, caster, (float)sp->second.cost);
+			});
+		}
+		return 0.0f;
+	}
+	// TurnMoonRed / TurnMoonWhite: Masser's colour (Bloodmoon's omen). OpenMW changes its picture; ours tints the
+	// one it has
+	case F_TURNMOONRED: case F_TURNMOONWHITE:
+		w.moonRed = n.func == F_TURNMOONRED;
+		return 0.0f;
+	// Face race facegen hair: an NPC's new head (Tribunal has one script that asks for it). The record changes, so
+	// dialogue conditions and the next time the cell is read follow; the model it stands in keeps its old head
+	case F_FACE:
+	{
+		if (r && r->actor >= 0)
+		{
+			int race = (int)argNum(c, n, 0);
+			if (race >= 0 && race < (int)w.game.races.size())
+			{
+				w.game.actors[r->actor].race = w.game.races[race].id;
+				monitorOnce(("face:" + r->id.str()).c_str(), "Face: %s is a %s now, but still wears its old head",
+					r->id.c_str(), w.game.races[race].id.c_str());
+			}
+		}
+		return 0.0f;
+	}
+	// The werewolf form (Bloodmoon): what the player is, and the kills made in it. Ours keeps the form as the
+	// session's flag (what it refuses, and the timer scripts), not a creature's body
+	case F_ISWEREWOLF: return c.host.isWerewolf() ? 1.0f : 0.0f;
+	case F_BECOMEWEREWOLF: case F_UNDOWEREWOLF:
+		c.host.setWerewolf(n.func == F_BECOMEWEREWOLF);
+		return 0.0f;
+	case F_GETWEREWOLFKILLS: return (float)w.werewolfKills;
+	// SetWerewolfAcrobatics: the human's Acrobatics back (OpenMW keeps the value from before the change). Ours
+	// never takes it away, so there is nothing to put back
+	case F_SETWEREWOLFACROBATICS:
+		return 0.0f;
 	default:
 	{
 		float v;

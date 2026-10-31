@@ -1104,6 +1104,19 @@ bool World::underWater(float z) const
 	return false;
 }
 
+// SetWaterLevel / ModWaterLevel / GetWaterLevel: an interior's water level. A level a script set stays with the
+// cell (OpenMW keeps it in the cell's state), so it is put back when the cell is read again
+float World::waterLevel(int cell) const
+{
+	if (cell < 0 || cell >= (int)cells.size())
+		return 0.0f;
+	auto set = waterLevels.find(cell);
+	if (set != waterLevels.end())
+		return set->second;
+	const LoadedCell* l = cells[cell].live;
+	return l ? l->cell.waterZ : 0.0f;
+}
+
 // The share of the view drawn in this weather outdoors: 0.69 (clear weather's day fog depth, which the view distance is
 // tuned for) over the weather's land fog depth, a quarter at least: an ash storm (1.1) draws 0.63 of it, rain 0.86.
 // Differs from OpenMW on purpose, for speed: OpenMW draws the whole view and only moves the fog's start toward
@@ -1481,6 +1494,33 @@ void World::placeAt(const std::string& id, int count, float dist, int dir, const
 	}
 }
 
+// PlaceItem / PlaceItemCell (OpenMW's placeObject): the object appears at that spot in that cell ("" for the one
+// the player stands in). A cell that is out of memory gets it when it comes in, as a dropped item does
+void World::placeItem(const std::string& cellName, const std::string& id, const float pos[3], float zrot)
+{
+	std::string low = lower(id);
+	int c = cellName.empty() ? current : cellIndex(cellName);
+	if (c < 0)
+	{
+		monitorOnce(("placeitem:" + lower(cellName)).c_str(), "PlaceItemCell: %s is not in the level",
+			cellName.c_str());
+		return;
+	}
+	bool actor = game.spawns.count(low) != 0;
+	if (!cells[c].live)
+	{
+		if (actor)
+			pendingSpawns.push_back({ low, cells[c].file, { pos[0], pos[1], pos[2] }, zrot, 0.0f, false });
+		else
+			droppedWaiting.push_back({ { low, 1, false }, cells[c].file, { pos[0], pos[1], pos[2] }, zrot });
+		return;
+	}
+	if (actor)
+		spawnActor(low, pos, zrot, c);
+	else
+		dropItem({ low, 1, false }, pos, zrot, c);
+}
+
 int World::refsInMemory() const
 {
 	int n = 0;
@@ -1855,6 +1895,10 @@ static void integrateLevelCell(World& w, int index, LoadedCell* l)
 	LevelCell& lc = w.cells[index];
 	w.respawnCell(index);               // before it is live: revived actors come in standing
 	lc.live = l;
+	// A water level a script set (SetWaterLevel) comes back with the cell
+	auto wl = w.waterLevels.find(index);
+	if (wl != w.waterLevels.end())
+		l->cell.waterZ = wl->second;
 	w.loaded.push_back(l);
 	// A cell that comes back within a few seconds of being freed: the border between two cells thrashes it
 	if (!lc.interior && w.time - lc.freedAt < 3.0f)
@@ -2571,11 +2615,21 @@ void World::setEnabled(int ri, bool on)
 	if (ri < 0)
 		return;
 	Ref& ref = refs[ri];
-	ref.enabled = on;
+	ref.enabled = on && !ref.deleted;      // (a deleted one stays away: Enable doesn't bring it back)
 	if (ref.visible())
 		showRanges(*this, ref);
 	else
 		hideRanges(*this, ref);
+}
+
+// SetDelete: OpenMW takes the object out of the world for good. Ours keeps its slot and hides it, which is what
+// Disable already does, and remembers it so the cell doesn't give it back when it is read again
+void World::deleteRef(int ri, bool gone)
+{
+	if (ri < 0)
+		return;
+	refs[ri].deleted = gone;
+	setEnabled(ri, !gone);
 }
 
 void World::pickUp(int ri)

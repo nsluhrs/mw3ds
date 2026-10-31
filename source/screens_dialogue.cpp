@@ -995,6 +995,8 @@ void Session::drawTravel()
 // and Sneak may rise, the others fall), and the player is let out at the nearest prison's release spot
 void Session::goToJail()
 {
+	// GetPCinJail has this frame to see it (OpenMW's mPlayerInJail)
+	w.pcJail = true;
 	int days = w.bounty / 100 > 1 ? w.bounty / 100 : 1;
 	w.gameHour += 24.0f * days;
 	rechargeItems(24.0f * days * 3600.0f / w.timescale());

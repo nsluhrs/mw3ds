@@ -50,6 +50,12 @@ struct ScriptHost
 	virtual bool centerOnCell(const std::string& name) { return false; }          // COC: false when there is no such place
 	virtual bool centerOnExterior(int x, int y) { return false; }                  // COE
 	virtual bool toggleGodMode() { return false; }                                 // TGM: on after the toggle
+	// Tribunal / Bloodmoon: what the player's right hand holds (GetWeaponType: the weapon's class, -2 a lockpick,
+	// -3 a probe, -1 nothing; whether it is out is w.pcWeaponDrawn), and the werewolf form
+	// (IsWerewolf / BecomeWerewolf / UndoWerewolf)
+	virtual int playerWeaponType() { return -1; }
+	virtual bool isWerewolf() { return false; }
+	virtual void setWerewolf(bool on) {}
 };
 
 int scriptFunctionId(const std::string& lowerName);
