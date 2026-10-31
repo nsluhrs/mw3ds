@@ -147,7 +147,7 @@ size_t nameTail(const std::string& s, size_t p)
 
 std::vector<Tok> tokenize(const std::string& line)
 {
-	static const char* kOps[] = { "->", "==", "!=", "<>", "<=", ">=", "=<", "=>", "<", ">", "=", "+", "-", "*", "/",
+	static const char* kOps[] = { "->", "==", "!=", "<>", "<==", ">==", "<=", ">=", "=<", "=>", "<", ">", "=", "+", "-", "*", "/",
 		"(", ")", "[", "]", ",", "." };
 	std::vector<Tok> out;
 	size_t pos = 0, n = line.size();
@@ -235,6 +235,8 @@ std::vector<Tok> tokenize(const std::string& line)
 		}
 		else if (kind == 'o' && (text == "[" || text == "]"))
 			text = text == "[" ? "(" : ")";          // OpenMW reads brackets as parentheses
+		else if (kind == 'o' && (text == "<==" || text == ">=="))
+			text.resize(2);   // OpenMW's scanner reads a whole run like <== as <= (Bethesda's plantScript typo)
 		out.push_back({ kind, text });
 		pos = end;
 	}

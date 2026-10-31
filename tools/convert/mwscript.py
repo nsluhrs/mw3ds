@@ -21,7 +21,7 @@ TOKEN = re.compile(r'''
     (?P<str>"[^"\n]*"?)
   | (?P<id2>\d+[A-Za-z_'`][A-Za-z0-9_'`]*(?:-[A-Za-z0-9_'`]+)*)
   | (?P<num>\d+\.\d*|\.\d+|\d+)
-  | (?P<op>->|==|!=|<>|<=|>=|=<|=>|<|>|=|\+|-|\*|/|\(|\)|\[|\]|,|\.)
+  | (?P<op>->|==|!=|<>|<==|>==|<=|>=|=<|=>|<|>|=|\+|-|\*|/|\(|\)|\[|\]|,|\.)
   | (?P<id>[A-Za-z_][A-Za-z0-9_'`]*(?:-[A-Za-z0-9_'`]+)*)
 ''', re.VERBOSE)
 
@@ -204,6 +204,8 @@ def tokenize(line):
             text = text.strip('"')
         elif kind == "op" and text in ("[", "]"):
             text = "(" if text == "[" else ")"      # OpenMW reads brackets as parentheses
+        elif kind == "op" and text in ("<==", ">=="):
+            text = text[:2]     # OpenMW's scanner reads a whole run like <== as <= (Bethesda's plantScript typo)
         out.append((kind, text))
         pos = m.end()
     return out
