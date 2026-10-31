@@ -2,8 +2,9 @@
 
 The game's records come from Morrowind.esm and the plugins in MW3DS_PLUGINS (";"-separated .esp / .esm names in
 Data Files, in load order), merged as OpenMW merges them: read_game() and load_db() give the merged records,
-read_records() one file as it is. Text in them is in the release's code page, MW3DS_ENCODING (OpenMW's --encoding
-names): win1252 (English, German, French ...), win1250 (Polish, Czech ...) or win1251 (Russian).
+read_records() one file as it is. With MW3DS_EXPANSIONS set, Tribunal.esm and Bloodmoon.esm load between them,
+each when its ESM is in Data Files. Text in them is in the release's code page, MW3DS_ENCODING (OpenMW's
+--encoding names): win1252 (English, German, French ...), win1250 (Polish, Czech ...) or win1251 (Russian).
 """
 import hashlib
 import re
@@ -28,7 +29,10 @@ if ENCODING not in ENCODINGS:
 CODEC = ENCODINGS[ENCODING]
 
 MASTER = "Morrowind.esm"
-# Masters this project leaves out: a plugin that needs one is refused
+# The expansions, loaded after Morrowind.esm when MW3DS_EXPANSIONS is set (each only when its ESM is in
+# Data Files). A plugin that needs one and does not get it loaded is refused.
+EXPANSIONS = [DATA_FILES / n for n in ("Tribunal.esm", "Bloodmoon.esm")
+              if os.environ.get("MW3DS_EXPANSIONS", "").strip() not in ("", "0") and (DATA_FILES / n).is_file()]
 OUT_OF_SCOPE = {"tribunal.esm", "bloodmoon.esm"}
 PLUGINS = [p.strip() for p in os.environ.get("MW3DS_PLUGINS", "").split(";") if p.strip()]
 
@@ -91,18 +95,32 @@ class Archives:
 
     def __init__(self, bsa_names=("Morrowind.bsa", "Tribunal.bsa", "Bloodmoon.bsa")):
         self.bsas = [BSA(DATA_FILES / n) for n in bsa_names if (DATA_FILES / n).exists()]
+        self._loose = None
+
+    def _loose_files(self):
+        """Loose files by lowercase forward-slash path (overlays win over Data Files, later overlays over earlier ones).
+        Looked up case-insensitively: on a case-sensitive filesystem the Windows paths the game uses, "Sound\\Fx\\x.wav",
+        are neither a path nor the right case, so sounds, voices and music (all loose, unlike the BSA's meshes and
+        textures) were never found and converted silent."""
+        if self._loose is None:
+            self._loose = {}
+            for base in (DATA_FILES, *OVERLAYS):
+                base = Path(base)
+                if not base.is_dir():
+                    continue
+                for f in base.rglob("*"):
+                    if f.is_file():
+                        self._loose[f.relative_to(base).as_posix().lower()] = f
+        return self._loose
 
     def exists(self, name):
         name = name.lower().replace("/", "\\")
-        return any((d / name).exists() for d in OVERLAYS) or (DATA_FILES / name).exists() or any(name in b.files for b in self.bsas)
+        return name.replace("\\", "/") in self._loose_files() or any(name in b.files for b in self.bsas)
 
     def read(self, name):
         name = name.lower().replace("/", "\\")
-        for d in reversed(OVERLAYS):
-            if (d / name).exists():
-                return (d / name).read_bytes()
-        loose = DATA_FILES / name
-        if loose.exists():
+        loose = self._loose_files().get(name.replace("\\", "/"))
+        if loose is not None:
             return loose.read_bytes()
         for b in reversed(self.bsas):
             if name in b.files:
@@ -168,19 +186,20 @@ def masters(path):
 
 
 def load_order():
-    """[Morrowind.esm, plugins...] as paths, each plugin's masters checked: every one must be loaded before it,
-    and none may be Tribunal.esm or Bloodmoon.esm (out of this project's scope)."""
-    order = [DATA_FILES / MASTER]
+    """[Morrowind.esm, the expansions of MW3DS_EXPANSIONS, plugins...] as paths, each plugin's masters checked:
+    every one must be loaded before it."""
+    order = [DATA_FILES / MASTER, *EXPANSIONS]
     for name in PLUGINS:
         path = DATA_FILES / name
         if not path.is_file():
             raise SystemExit(f"MW3DS_PLUGINS: {name} is not in {DATA_FILES}")
         loaded = {p.name.lower() for p in order}
         for m in masters(path):
+            if m.lower() in loaded:
+                continue
             if m.lower() in OUT_OF_SCOPE:
-                raise SystemExit(f"MW3DS_PLUGINS: {name} needs {m}; only Morrowind.esm content is supported")
-            if m.lower() not in loaded:
-                raise SystemExit(f"MW3DS_PLUGINS: {name} needs {m}, which is not loaded before it")
+                raise SystemExit(f"MW3DS_PLUGINS: {name} needs {m}; set MW3DS_EXPANSIONS=1 to convert with the expansions")
+            raise SystemExit(f"MW3DS_PLUGINS: {name} needs {m}, which is not loaded before it")
         order.append(path)
     return order
 
@@ -188,7 +207,7 @@ def load_order():
 def content_key():
     """What converted data depends on besides the converters: the plugins (by content) and the text encoding.
     Empty for plain Morrowind.esm in win1252, so caches made before plugins existed stay valid."""
-    if not PLUGINS and ENCODING == "win1252":
+    if not PLUGINS and not EXPANSIONS and ENCODING == "win1252":
         return ""
     h = hashlib.sha1(ENCODING.encode())
     for path in load_order()[1:]:
@@ -464,11 +483,12 @@ def _remap_land(r, fi, ltex_ids, gindex):
 
 
 def read_game(wanted=None):
-    """The game's records: Morrowind.esm with the plugins of MW3DS_PLUGINS laid over it as OpenMW does. A later
-    record of the same type and ID replaces the whole record and one with DELE removes it; cells merge their
-    references by number (a plugin changes, deletes or adds some, MVRF moves one to another exterior cell);
-    a topic's responses merge by INAM in the PNAM chain; LAND takes the later file's whole record."""
-    if not PLUGINS:
+    """The game's records: Morrowind.esm with the expansions of MW3DS_EXPANSIONS and the plugins of MW3DS_PLUGINS
+    laid over it as OpenMW does. A later record of the same type and ID replaces the whole record and one with
+    DELE removes it; cells merge their references by number (a plugin changes, deletes or adds some, MVRF moves
+    one to another exterior cell); a topic's responses merge by INAM in the PNAM chain; LAND takes the later
+    file's whole record."""
+    if not PLUGINS and not EXPANSIONS:
         yield from read_records(DATA_FILES / MASTER, wanted)
         return
     for r in _merge():

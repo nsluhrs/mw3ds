@@ -41,7 +41,7 @@ from distant import build_distant
 from creature import resolve_leveled
 from firstperson import FirstPerson
 from particles import build_pieces
-from mwfiles import CODEC, DATA_FILES, MASTER, Archives, cell_refs, load_db, read_game, safe_name, text
+from mwfiles import CODEC, DATA_FILES, MASTER, Archives, cell_refs, load_db, load_order, read_game, safe_name, text
 from npcstats import npc_stats, worn_items
 from terrain import CELL_SIZE
 from terrain import Terrain
@@ -483,7 +483,7 @@ def main():
     db = load_db()
     arch = Archives()
     ini = read_ini()
-    print(f"ESM loaded in {time.time() - t0:.1f}s")
+    print(f"ESM loaded in {time.time() - t0:.1f}s: " + ", ".join(p.name for p in load_order()))
     global START_CELL, OFFICE_CELL, TOWN
     START_CELL, OFFICE_CELL, TOWN = chargen_cells(db)
 

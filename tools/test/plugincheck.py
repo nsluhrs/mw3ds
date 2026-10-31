@@ -203,7 +203,7 @@ def main():
                 bad_land.append(grid)
     check(not bad_land, f"land: {lands} plugin LAND records keep their textures{' ' + str(bad_land[:3]) if bad_land else ''}")
 
-    # 5. Load order: a plugin that isn't there, or needs Tribunal / Bloodmoon, is refused
+    # 5. Load order: a plugin that isn't there is refused; the expansions load when MW3DS_EXPANSIONS is set
     for names, why in ((["no such plugin.esp"], "missing plugin refused"),):
         mwfiles.PLUGINS = names
         try:
@@ -211,6 +211,10 @@ def main():
             check(False, why)
         except SystemExit:
             check(True, why)
+    mwfiles.PLUGINS, saved = [], mwfiles.EXPANSIONS
+    mwfiles.EXPANSIONS = [DATA_FILES / "Tribunal.esm"]
+    check([p.name for p in mwfiles.load_order()] == [MASTER, "Tribunal.esm"], "expansions: loaded when the flag is set")
+    mwfiles.EXPANSIONS = saved
 
     # 6. Text: the code page setting, file names for letters outside ASCII
     check(mwfiles.text(b"wulfharth\x92s cups\0") == "wulfharth’s cups" or mwfiles.ENCODING != "win1252",

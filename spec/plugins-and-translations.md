@@ -8,12 +8,15 @@ shows a cell name (`#{sCell=...}`). In our words. Our side is `tools/convert/mwf
 the engine's `GameData::gmstLabel / cellLabel / topicStandardForm / topicKeyword`, `dialogueHyperText`. The check
 is `tools/test/plugincheck.py`, against the official plugins in the player's own Data Files.
 
-Scope: plugins whose masters are `Morrowind.esm` (and plugins before them). A plugin needing `Tribunal.esm` or
-`Bloodmoon.esm` is refused at convert time. MWSE, MGE XE and OpenMW Lua mods are out.
+Scope: plugins whose masters are `Morrowind.esm` (and plugins before them), or, with `MW3DS_EXPANSIONS` set, the
+expansions' masters too; without it a plugin needing `Tribunal.esm` or `Bloodmoon.esm` is refused at convert time.
+MWSE, MGE XE and OpenMW Lua mods are out.
 
 ## 1. Load order
 
-`MW3DS_PLUGINS` lists the plugins (`;`-separated, names in Data Files), in load order, after `Morrowind.esm`. Each
+`MW3DS_PLUGINS` lists the plugins (`;`-separated, names in Data Files), in load order, after `Morrowind.esm`. With
+`MW3DS_EXPANSIONS` set, `Tribunal.esm` and `Bloodmoon.esm` load between the two, each when its ESM is in Data Files.
+Each
 plugin's `MAST` entries must name files loaded before it. OpenMW takes its content list from `openmw.cfg`; we take
 it from `.env` so a conversion doesn't depend on a launcher. The plugins' contents (and the text encoding) are part
 of the cell cache key and the texture cache key: another plugin set converts again.

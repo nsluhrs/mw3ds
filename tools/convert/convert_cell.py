@@ -46,6 +46,13 @@ def light_falloff(dist, radius):
     x = np.clip((dist / (LIGHT_BOUNDS * radius) - 0.75) / 0.25, 0.0, 1.0)
     return att * (1.0 - x * x) ** 2
 INTERIOR_SUN_DIR = np.array([-0.15, 0.15, 1.0]) / np.linalg.norm([-0.15, 0.15, 1.0])
+
+# Tribunal's five Mournhold sky districts (Godsreach, Great Bazaar, Plaza Brindisi Dorom, the Palace and Temple
+# courtyards): interior cells with the sky and water flags and no AMBI at all. OpenMW lights them like the
+# outdoors, from the region's weather, and floats their canals on the global water level (z = 0, where the
+# "Where Waters Meet" quest starts). Until the engine lights interiors from the weather, they bake with the
+# Clear-weather day ambient: the vanilla ini's [Weather Clear] day colours (level.py's WEATHER_DEFAULTS).
+SKY_AMBIENT = struct.pack("<3sB3sB4sf", bytes((137, 140, 160)), 0, bytes((255, 252, 238)), 0, bytes(4), 0.0)
 # Outdoors the sun's path runs east to west along (400 x orbit, -75, 100) (OpenMW's WeatherManager::update, Morrowind's
 # constant): baked from where it is at noon, overhead and to the south. Its east-west part is the side light
 # (cell.v.pica sideLight): each opaque vertex keeps how much it faces east in its colour's alpha, lit at run time from
@@ -824,6 +831,8 @@ class Converter:
     def interior(self, cell_name, spawn=None):
         cell = self.db["CELL"][cell_name]
         ambi = cell.get("AMBI")
+        if ambi is None:      # a Mournhold sky district: see SKY_AMBIENT
+            ambi = SKY_AMBIENT
         # Water as OpenMW reads it: the "has water" flag (DATA bit 1), the height from INTV (a whole
         # number, older records) or WHGT (a float), whichever comes last before the references; 0 if neither
         has_water = bool(struct.unpack_from("<I", cell.get("DATA"))[0] & 2)
