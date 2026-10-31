@@ -48,9 +48,10 @@ git clone --recurse-submodules https://github.com/3ds-conspiracy/mw3ds.git
 ### 2. Install the prerequisites
 
 You need a Windows PC (Linux and macOS can build too: the scripts call `make` directly there, with devkitPro
-installed and `DEVKITPRO` set. That path has not been tried yet) with:
+installed and `DEVKITPRO` set; that path was tried through devkitPro's container, see the note under the table) with:
 
-- **Morrowind**, installed anywhere. Only the base game is used; Tribunal and Bloodmoon are not needed.
+- **Morrowind**, installed anywhere. Only the base game is used; Tribunal and Bloodmoon are optional
+  (`MW3DS_EXPANSIONS=1`, see [Plugins and other languages](#plugins-and-other-languages)).
 - **[Python](https://www.python.org/downloads/) 3.10 or newer.** Tick "Add Python to PATH" in the installer.
 - **[Git](https://git-scm.com/download/win).**
 - **[MSYS2](https://www.msys2.org/)**, with devkitPro's pacman repository added to it. Follow
@@ -97,6 +98,18 @@ says what and where to get it. Run it again with `--check` any time to see the s
 
 Each converts the game data from your Morrowind install (with the mods laid over it), builds the engine and packs both
 into the CIA (about 1 GB). The first run takes an hour or more; later runs reuse what is already converted.
+
+No MSYS2, but Docker or Podman? The CI's devkitPro image builds the program on Linux in one line (the image has
+`make`, `tex3ds` and `picasso`; `makerom` comes from `MW3DS_CTR_TOOLS_DIR`, so the CIA step runs on the host):
+
+```sh
+docker run --rm -v "$PWD:/src" docker.io/devkitpro/devkitarm \
+  bash -c 'cd /src && source /opt/devkitpro/devkitarm.sh && make -j$(nproc)'
+MW3DS_CTR_TOOLS_DIR=build/ctr-tools python tools/build/build_cia.py --skip-convert --prebuilt
+```
+
+That writes `mw3ds.elf` / `mw3ds.3dsx` here, and packs them with the data already in `out\data` into
+`build\mw3ds.cia`. `--data out/exp` packs a converted expansion set instead (`build\mw3ds-exp.cia`).
 
 After changing only the engine code (a new commit), skip the conversion:
 
@@ -189,6 +202,14 @@ in load order: `MW3DS_PLUGINS=Siege at Firemoth.esp;master_index.esp`. The conve
 `Morrowind.esm` the way OpenMW does. Plugins that need Tribunal or Bloodmoon, MWSE, MGE XE or OpenMW Lua are not
 supported. At the end of a conversion each plugin gets a line listing any script functions the engine does not run
 yet, so you can see why a mod only half works.
+
+**The expansions.** `MW3DS_EXPANSIONS=1` converts with `Tribunal.esm` and `Bloodmoon.esm` loaded between
+`Morrowind.esm` and the plugins: Mournhold, Solstheim, their items, people and dialogue, and every script function
+they add (Mournhold's water cranks, the werewolf form, the blood moon). A few things are kept different on purpose
+and a few are still to do: snow and blizzard particles, the expansions' start scenes and their music. The list is in
+[`spec/scripting.md`](spec/scripting.md). Plugins that need the expansions load only with this set. To put such a set
+in a CIA: `python tools/build/build_cia.py --data out/exp` (the CIA becomes `build/mw3ds-exp.cia`; the build needs
+devkitPro, or the container recipe in [Build](#5-build)).
 
 **Translated Morrowind.** A German, French, Polish, Russian ... `Morrowind.esm` converts like the English one: set
 `MW3DS_ENCODING` for its alphabet and convert. See [LANGUAGES.md](LANGUAGES.md) for the steps and what changes

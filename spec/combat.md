@@ -181,6 +181,13 @@ and NPCs, `tools/convert/npcstats.py armor_rating`).
 Test: `openmw-spec-combat` (generated): attack term, the player's defense, knockdown odds, fall damage, block chance,
 elemental shield damage.
 
+2026-10-31 (found by `ui-book-pages` on a rebuilt engine, not expansion code): `npcCombat` kept its `Actor*` across
+`npcSummonRelease`, which adds the summoned creature to the cell's actor list — a `std::vector` that grows, moving
+every Actor in it. The write after it (`a->showWeapon`) landed in freed memory; with a different heap layout that
+memory was a spell visual's piece by then and the game crashed drawing it. Fixed: ask `actorOf` again after the
+summon leaves their hands. The same trap exists for any `Actor*` held across something that adds an actor (a script's
+`PlaceItem` of a creature); nothing else was found holding one that long.
+
 ## Open
 
 - Enchanted weapons count as magical (OpenMW's default setting); vanilla may differ.

@@ -399,3 +399,21 @@ D21 = F18, D23 = F19, J5 = F25, J7 = F20.
 | S3 | `Equip` on an NPC only gives the item | OpenMW adds the item and equips it (OpEquip); NPC clothes and armour are baked into meshes at conversion and the weapon is a record field here; no vanilla script calls Equip | low | open |
 | S4 | Options > Console | OpenMW's console window, typed on a keyboard, an object picked with the mouse; here the bottom screen, the system keyboard, and the object under the crosshair when the menu opened | low | differs (3DS UI, kept) |
 | S5 | Create Custom Class | OpenMW opens a window per choice (specialization, attribute, skill, description) over the form and shows the help as tooltips; here one bottom-screen form whose fields open a list in its place (a tap lights a choice, OK takes it; the skills in taller rows that scroll), the help under the specialization and attribute lists, name and description on the system keyboard | low | differs (3DS UI, kept) |
+
+## Script: Tribunal and Bloodmoon (`components/compiler/extensions0.cpp`, `mwscript/statsextensions.cpp`, `miscextensions.cpp`, `transformationextensions.cpp`, `skyextensions.cpp`)
+
+The functions the expansions add, run 2026-10-31 (`spec/scripting.md` has the whole list; `exp-script` and
+`exp-mournhold` test them). What each of these does differently on purpose:
+
+| # | Function | Difference | Conf | Status |
+|---|---|---|---|---|
+| X2 | `SetDelete 1` | OpenMW takes the reference out of the world; ours keeps its slot, hidden and inert (`Ref::deleted`, saved with its other changes, and `Enable` does not bring it back) | high | fixed (`exp-script`) |
+| X3 | `SetScale n` | OpenMW scales the scene node and its physics shape; ours scales the collision box, while the model is baked into the cell's geometry at its converted size and stays as it is | high | differs (baked geometry; the 12 uses are the wereboar women at Ashed End, 1.00 / 1.20) |
+| X4 | `Face race facegen hair` | OpenMW makes a new head (race, facegen, hair) and re-dresses the actor; ours changes the record's race, so dialogue conditions and the next read of the cell follow, and the standing model keeps its old head | high | differs (one script asks: `"Tienius Delitian"->Face 0 0 -116`) |
+| X5 | `BecomeWerewolf` / `UndoWerewolf` / `IsWerewolf` | OpenMW turns the player into the `werewolf` creature (body, skills, inventory); ours keeps the form as the session's flag: what it refuses, and the timer scripts that run it. `SetWerewolfAcrobatics` has nothing to put back | high | differs (no creature body for the player here) |
+| X6 | `ModResistFire` and its five kin | OpenMW's `modEffect` has no duration and stays until cured; ours ticks its effects down, so these get a duration no playthrough runs out | medium | differs |
+| X7 | `TurnMoonRed` / `TurnMoonWhite` | OpenMW changes Masser's texture; ours tints the picture it has (the sky billboard's vertex colour) | medium | differs (no red moon pictures) |
+| X8 | `GetCollidingPC` / `GetCollidingActor` / `HurtCollidingActor n` | OpenMW asks its physics system for the bodies overlapping the object; ours takes the object's box against bodies of the size projectiles aim at (34 x 135) | medium | differs |
+| X9 | `PlaceItem` / `PlaceItemCell` in a cell that is out of memory | OpenMW keeps the object in the cell's state; ours queues it (as a dropped item) and places it when the cell is read | medium | differs |
+| X10 | `GetPCinJail` / `GetPCTraveling` | one-frame flags, not a state: OpenMW's `World::update` resets them at the start of each frame, ours after that frame's scripts have run — the same one frame to notice | high | fixed (`exp-script`) |
+| X11 | `GetStat Level` written bare (no quotes) | our compiler reads the bare word as a variable; the variable's name is taken as the stat (OpenMW's parser takes a name as the string) | medium | fixed (`exp-script`) |
