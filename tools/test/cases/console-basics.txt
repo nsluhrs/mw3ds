@@ -39,7 +39,7 @@
 0.3 0 0 0 0 EXPECT:conval:eq:20
 0.3 0 0 0 0 CON:-5%^%2
 0.3 0 0 0 0 EXPECT:conval:eq:-3
-# refused: an unknown name, a block keyword, a set without "to", a Bloodmoon-only function the engine leaves out
+# refused: an unknown name, a block keyword, a set without "to"
 0.3 0 0 0 0 CON:frobnicate
 0.3 0 0 0 0 EXPECT:conerr:eq:1
 0.3 0 0 0 0 CON:if%1
@@ -47,6 +47,11 @@
 0.3 0 0 0 0 CON:set%timescale%30
 0.3 0 0 0 0 EXPECT:conerr:eq:1
 0.3 0 0 0 0 EXPECT:global:timescale:eq:15
+# a Bloodmoon function the engine runs: the player is a werewolf, and is not again after UndoWerewolf
 0.3 0 0 0 0 CON:player->becomewerewolf
-0.3 0 0 0 0 EXPECT:conerr:eq:1
+0.3 0 0 0 0 CON:player->IsWerewolf
+0.1 0 0 0 0 EXPECT:conval:eq:1+EXPECT:conerr:eq:0
+0.3 0 0 0 0 CON:player->undowerewolf
+0.3 0 0 0 0 CON:player->IsWerewolf
+0.1 0 0 0 0 EXPECT:conval:eq:0+EXPECT:conerr:eq:0
 1 0 0 0

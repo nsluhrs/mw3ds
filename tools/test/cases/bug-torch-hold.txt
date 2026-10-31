@@ -10,7 +10,11 @@
 3 0 0 0
 25 0 0 0
 0.3 0 0 0 0 SETWEATHER:Clear+HOUR:22
-1 0 0 0
+# The guard the checks find is whichever reference with that id the level has first: with the expansions loaded
+# that is another one, out of the actors' animation range, and its arm never rises here. Place one by the player
+# and measure it (the test's own placed reference is the one the checks then read).
+0.3 0 0 0 0 PLACE:redoran%guard%male
+2 0 0 0
 0.1 0 0 0 0 EXPECT:reftorch:redoran%guard%male:eq:1+EXPECT:reftorcharm:redoran%guard%male:eq:1+EXPECT:reflhandz:redoran%guard%male:ge:98
 0.3 0 0 0 0 HOUR:12
 1 0 0 0

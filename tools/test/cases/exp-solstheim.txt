@@ -1,0 +1,22 @@
+# data: expansions
+# Bloodmoon: Solstheim's exteriors load (its regions' Snow / Blizzard chances are in the weather roll, its
+# land textures converted), Raven Rock's town spawn puts the player on the street, its people are there, and a
+# region cell's own spawn spot sets the player down on its land. Needs data converted with MW3DS_EXPANSIONS=1.
+# The "can't be aimed at" warnings its creatures make are the pre-existing kind spawned creatures make
+# everywhere (the same in Ashmelech on plain Morrowind data).
+3 0 0 0 0 MSG
+0.3 0 0 0 0 GOD
+0.3 0 0 0 0 GOTO:Raven_Rock
+8 0 0 0
+0.3 0 0 0 0 EXPECT:cell:Raven_Rock
+0.3 0 0 0 0 EXPECT:playerz:gt:-4000
+0.3 0 0 0 0 EXPECT:playerz:lt:4000
+0.3 0 0 0 0 SHOT
+2 0 0 0
+0.3 0 0 0 0 GOTO:Solstheim,_Isinfier_Plains
+8 0 0 0
+0.3 0 0 0 0 EXPECT:cell:Solstheim,_Isinfier_Plains
+0.3 0 0 0 0 EXPECT:playerz:gt:-4000
+0.3 0 0 0 0 EXPECT:playerz:lt:8000
+0.3 0 0 0 0 SHOT
+1 0 0 0

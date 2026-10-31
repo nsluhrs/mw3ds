@@ -10,6 +10,8 @@ Each case gets its own SD folder (build/native/sd-<slot>), so they do not touch 
 --exe / --sd-root / --no-latest: another native build (build.py with MW3DS_NATIVE_BUILD), its own SD folders, and no copy
 to build/native-results/latest (a second session's run that leaves the first one's alone)
 --old3ds: every case with the Old 3DS profile (slow CPU, small heap: include/console.h), as run_test.py --old3ds
+--expansions: the --data folder was converted with MW3DS_EXPANSIONS=1 (Tribunal + Bloodmoon in it), so the cases that
+    say "# data: expansions" (exp-mournhold, exp-solstheim) run too; left out of a plain Morrowind run
 """
 import argparse
 import csv
@@ -29,7 +31,7 @@ ROOT = mwtools.ROOT
 SWEEP_CASE = re.compile(r"^(qrun|srun|xrun)-\d+$")
 
 
-def select_cases(filters, old3ds):
+def select_cases(filters, old3ds, expansions):
     cases = sorted(p.stem for p in mwtools.CASES.glob("*.txt"))
     if filters:
         cases = [c for c in cases if any(fnmatch.fnmatchcase(c.lower(), f.lower()) for f in filters)]
@@ -40,12 +42,15 @@ def select_cases(filters, old3ds):
     # animation rates, issue-32-old3ds the Old 3DS profile's): left out of a run with the other profile
     # A case only the emulator can judge says "# run: emulator" (bug-quit-black-screen: the exit with the data as romfs;
     # the native build ends its run straight after the save): left out of native runs the same way
+    # A case that needs Tribunal / Bloodmoon in the data says "# data: expansions" (exp-mournhold: Mournhold is not in
+    # plain Morrowind.esm): left out unless --expansions says the --data folder was converted with MW3DS_EXPANSIONS=1
     console = "old" if old3ds else "new"
     other = []
     for c in cases:
         for ln in mwtools.read_lines(mwtools.CASES / f"{c}.txt")[:5]:
             m = re.match(r"^#\s*console:\s*(new|old)\s*$", ln)
-            if (m and m.group(1) != console) or re.match(r"^#\s*run:\s*emulator\s*$", ln):
+            if (m and m.group(1) != console) or re.match(r"^#\s*run:\s*emulator\s*$", ln) or (
+                    re.match(r"^#\s*data:\s*expansions\s*$", ln) and not expansions):
                 other.append(c)
                 break
     return [c for c in cases if c not in other], other
@@ -122,6 +127,7 @@ def main():
     ap.add_argument("--sd-root", default="build/native")
     ap.add_argument("--no-latest", action="store_true")
     ap.add_argument("--old3ds", action="store_true")
+    ap.add_argument("--expansions", action="store_true")
     a = ap.parse_args()
 
     jobs = a.jobs if a.jobs > 0 else max(1, (os.cpu_count() or 2) - 2)
@@ -134,7 +140,7 @@ def main():
     exe = str(Path(a.exe).resolve()) if a.exe else str(default_exe)
 
     filters = [f for part in a.filter for f in part.split(",") if f]
-    cases, other_console = select_cases(filters, a.old3ds)
+    cases, other_console = select_cases(filters, a.old3ds, a.expansions)
     if not cases:
         print("no cases match")
         return 1
@@ -191,7 +197,8 @@ def main():
     mode = ", monitor warnings ignored" if a.ignore_warnings else ""
     lines = [f"native run {stamp}: {len(passed)} of {total} passed in {int(time.time() - clock)} s ({jobs} at a time, data {a.data}{mode})"]
     if other_console:
-        lines.append(f"left out, for the other console or the emulator only: {', '.join(other_console)}")
+        lines.append(f"left out, for the other console, the emulator or plain Morrowind data only: "
+                     f"{', '.join(other_console)}")
     lines += ["", f"SUCCEEDED ({len(passed)}):"]
     for r in passed:
         extra = f"  {r['detail']}" if r["detail"].startswith("sweep:") else (f"  ({r['warnings']} warnings ignored)" if r["warnings"] else "")

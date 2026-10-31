@@ -1,0 +1,88 @@
+# data: expansions
+# The Tribunal and Bloodmoon script functions, run through the dev console (each line compiled on the device and
+# run by the interpreter, as in console-basics). Mournhold's water is the interesting part: Old Mournhold: Forgotten
+# Sewer raises and drains it with its cranks (the changeWater_-550_400 scripts), so GetWaterLevel / SetWaterLevel /
+# ModWaterLevel are checked there, and the level a script set stays with the cell. The rest are the player queries
+# (OpenMW gives most of them an explicit form, so the console asks them of `player`) and the world switches
+# (EnableLevitation, TurnMoonRed, the werewolf form). Needs data converted with MW3DS_EXPANSIONS=1.
+3 0 0 0 0 MSG
+0.3 0 0 0 0 GOD
+0.3 0 0 0 0 GOTO:Old_Mournhold:_Forgotten_Sewer
+6 0 0 0
+0.3 0 0 0 0 EXPECT:cell:Old_Mournhold:_Forgotten_Sewer
+# GetInterior: an interior; GetSquareRoot
+0.3 0 0 0 0 CON:GetInterior
+0.1 0 0 0 0 EXPECT:conval:eq:1+EXPECT:conerr:eq:0
+0.3 0 0 0 0 CON:GetSquareRoot%16
+0.1 0 0 0 0 EXPECT:conval:eq:4
+# GetWaterLevel / SetWaterLevel / ModWaterLevel: the level moves, and the cell's own water with it
+0.3 0 0 0 0 CON:SetWaterLevel%250
+0.3 0 0 0 0 CON:GetWaterLevel
+0.1 0 0 0 0 EXPECT:conval:eq:250+EXPECT:waterlevel:eq:250
+0.3 0 0 0 0 CON:ModWaterLevel%-100
+0.3 0 0 0 0 CON:GetWaterLevel
+0.1 0 0 0 0 EXPECT:conval:eq:150+EXPECT:waterlevel:eq:150
+# down off the player's feet, so the sneak test below is not swimming
+0.3 0 0 0 0 CON:SetWaterLevel%-1000
+1 0 0 0
+# GetPCSneaking
+0.3 0 0 0 0 CON:GetPCSneaking
+0.1 0 0 0 0 EXPECT:conval:eq:0
+0.3 0 0 0 0 SNEAK:1
+1 0 0 0
+0.3 0 0 0 0 EXPECT:sneaking:eq:1
+0.3 0 0 0 0 CON:GetPCSneaking
+0.1 0 0 0 0 EXPECT:conval:eq:1
+0.3 0 0 0 0 SNEAK:0
+# IsWerewolf / GetWerewolfKills: the form the session keeps, and the kills made in it
+0.3 0 0 0 0 CON:player->IsWerewolf
+0.1 0 0 0 0 EXPECT:conval:eq:0+EXPECT:conerr:eq:0
+0.3 0 0 0 0 WEREWOLF:1
+0.3 0 0 0 0 CON:player->IsWerewolf
+0.1 0 0 0 0 EXPECT:conval:eq:1
+0.3 0 0 0 0 CON:GetWerewolfKills
+0.1 0 0 0 0 EXPECT:conval:eq:0
+0.3 0 0 0 0 WEREWOLF:0
+# GetPCinJail / GetPCTraveling need no reference (OpenMW registers no explicit form for them); the other player
+# queries are asked of `player`
+0.3 0 0 0 0 CON:GetPCinJail
+0.1 0 0 0 0 EXPECT:conval:eq:0
+0.3 0 0 0 0 CON:GetPCTraveling
+0.1 0 0 0 0 EXPECT:conval:eq:0
+0.3 0 0 0 0 CON:player->GetWeaponDrawn
+0.1 0 0 0 0 EXPECT:conval:eq:0+EXPECT:conerr:eq:0
+# GetWeaponType: the right hand's weapon, out or not. The start kit carries an iron dagger, worn; with it off the
+# hand is empty (-1), and equipping it again reports its type (the ESM subtype: a dagger is 0)
+0.3 0 0 0 0 UNEQUIP:iron_dagger
+0.3 0 0 0 0 CON:player->GetWeaponType
+0.1 0 0 0 0 EXPECT:conval:eq:-1
+0.3 0 0 0 0 EQUIP:iron%dagger
+0.3 0 0 0 0 CON:player->GetWeaponType
+0.1 0 0 0 0 EXPECT:conval:eq:0
+0.3 0 0 0 0 CON:player->GetChameleon
+0.1 0 0 0 0 EXPECT:conval:eq:0
+0.3 0 0 0 0 CON:player->GetParalysis
+0.1 0 0 0 0 EXPECT:conval:eq:0
+# GetStat: one stat by its name, the same numbers GetLevel and GetStrength give
+0.3 0 0 0 0 CON:player->GetStat%Level
+0.1 0 0 0 0 EXPECT:conval:gt:0+EXPECT:conerr:eq:0
+0.3 0 0 0 0 CON:player->GetStat%Strength
+0.1 0 0 0 0 EXPECT:conval:gt:0
+# EnableLevitation / DisableLevitation and TurnMoonRed / TurnMoonWhite: world switches, no reference
+0.3 0 0 0 0 CON:DisableLevitation
+0.3 0 0 0 0 CON:EnableLevitation
+0.1 0 0 0 0 EXPECT:conerr:eq:0
+0.3 0 0 0 0 CON:TurnMoonRed
+0.3 0 0 0 0 CON:TurnMoonWhite
+0.1 0 0 0 0 EXPECT:conerr:eq:0
+# SetScale / SetDelete on a placed creature: its size, and gone for good
+0.3 0 0 0 0 PLACE:scamp:250
+2 0 0 0
+0.3 0 0 0 0 EXPECT:refexists:scamp:eq:1
+0.3 0 0 0 0 CON:"scamp"->SetScale%2
+0.3 0 0 0 0 EXPECT:refscale:scamp:eq:2
+0.3 0 0 0 0 CON:"scamp"->SetDelete%1
+0.3 0 0 0 0 EXPECT:refenabled:scamp:eq:0
+0.3 0 0 0 0 CON:"scamp"->SetDelete%0
+0.3 0 0 0 0 EXPECT:refenabled:scamp:eq:1
+1 0 0 0

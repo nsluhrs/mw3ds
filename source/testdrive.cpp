@@ -205,7 +205,7 @@ static bool hasArg(const std::string& what)
 		|| what == "refhealth" || what == "refrank" || what == "reflevel" || what == "refspell" || what == "reffatigue" || what == "refmagicka" || what == "refdisp" || what == "refflee"
 		|| what == "refattr" || what == "refskill" || what == "refhealthmax" || what == "refmagickamax" || what == "refcommanded"
 		|| what == "effectarg" || what == "locklevel" || what == "summoned" || what == "itemhealth" || what == "spellmagicka"
-		|| what == "refcell" || what == "refforcesneak" || what == "refpkg" || what == "refpkgdone" || what == "refvfx" || what == "refvfxhands" || what == "refvfxhandz" || what == "reflhandz" || what == "refcombat" || what == "refrun" || what == "refdying" || what == "refknock" || what == "refsidesteps" || what == "refidlevoice" || what == "refheadyaw" || what == "refheadpitch" || what == "refsoultrap" || what == "refally" || what == "refdist" || what == "refaimed" || what == "refabove" || what == "refhiddenparts" || what == "refweaponrating" || what == "reftorch" || what == "reftorchfire" || what == "refcpuskin" || what == "refblendskin" || what == "refmeshes" || what == "refdressed" || what == "refz" || what == "refclimb" || what == "reftorcharm" || what == "refshield" || what == "refglow" || what == "refalpha" || what == "reftint" || what == "reflampnow" || what == "refheldlight" || what == "refanimtime" || what == "refabovefeet" || what == "refadditive" || what == "refwater" || what == "refaimable" || what == "refbox" || what == "refitem" || what == "refgap" || what == "reflock" || what == "reftrap" || what == "scripttarget" || what == "reflocal" || what == "reflocalfrac" || what == "scriptlocal" || what == "refloopvol" || what == "soundstarted" || what == "spellcost" || what == "castchance" || what == "brewedmag" || what == "brewedduration" || what == "charge"
+		|| what == "refcell" || what == "refforcesneak" || what == "refpkg" || what == "refpkgdone" || what == "refvfx" || what == "refvfxhands" || what == "refvfxhandz" || what == "reflhandz" || what == "refcombat" || what == "refrun" || what == "refdying" || what == "refknock" || what == "refsidesteps" || what == "refidlevoice" || what == "refheadyaw" || what == "refheadpitch" || what == "refsoultrap" || what == "refally" || what == "refdist" || what == "refaimed" || what == "refabove" || what == "refhiddenparts" || what == "refweaponrating" || what == "reftorch" || what == "reftorchfire" || what == "refcpuskin" || what == "refblendskin" || what == "refmeshes" || what == "refdressed" || what == "refz" || what == "refscale" || what == "refclimb" || what == "reftorcharm" || what == "refshield" || what == "refglow" || what == "refalpha" || what == "reftint" || what == "reflampnow" || what == "refheldlight" || what == "refanimtime" || what == "refabovefeet" || what == "refadditive" || what == "refwater" || what == "refaimable" || what == "refbox" || what == "refitem" || what == "refgap" || what == "reflock" || what == "reftrap" || what == "scripttarget" || what == "reflocal" || what == "reflocalfrac" || what == "scriptlocal" || what == "refloopvol" || what == "soundstarted" || what == "spellcost" || what == "castchance" || what == "brewedmag" || what == "brewedduration" || what == "charge"
 		|| what == "count" || what == "repairamount" || what == "rechargegain" || what == "lockchance" || what == "trapchance"
 		|| what == "persuadechance" || what == "persuadepart" || what == "enchantcastcost" || what == "resistbase"
 		|| what == "crimebounty" || what == "skillneed" || what == "attackterm" || what == "knockodds" || what == "falldamage" || what == "poseevery" || what == "skinevery"
@@ -331,6 +331,8 @@ static bool numberOf(Session& s, const std::string& what, const std::string& arg
 	if (what == "hitchance") { v = s.playerDefense(false); return true; }              // Sanctuary, Chameleon, Invisibility
 	if (what == "detectchance") { v = w.effectTotal(40) + (w.effectTotal(39) > 0.0f ? 100.0f : 0.0f); return true; }
 	if (what == "levitating") { v = w.effectTotal(10) > 0.0f ? 1.0f : 0.0f; return true; }
+	// the water of the cell the player is in, the level a script set included (GetWaterLevel / SetWaterLevel)
+	if (what == "waterlevel") { v = w.waterLevel(w.current); return true; }
 	// where the player's feet are (SNAP one, then EXPECT it moved at most / at least so much with "@")
 	if (what == "playerx" || what == "playery" || what == "playerz") { v = w.player.feet[what[6] - 'x']; return true; }
 	// which way the player looks, in degrees (yaw: + toward east, not wrapped; pitch: + up): SNAP one, EXPECT how far it turned
@@ -1306,6 +1308,8 @@ static bool numberOf(Session& s, const std::string& what, const std::string& arg
 			v = npcClimbSlope(w, w.refs[ri]);
 		else if (what == "refz")            // the height of its feet
 			v = w.refs[ri].pos[2];
+		else if (what == "refscale")        // its size (SetScale)
+			v = w.refs[ri].scale;
 		else if (what == "refdressed")      // 1 once it has been dressed again from the third-person pieces (npcDress)
 		{
 			const Actor* a = w.actorOf(ri);
@@ -3980,6 +3984,24 @@ bool TestDriver::start(Session& s, const std::string& token)
 				return false;
 			}
 		logf("drive: FAIL equip %s: not carried", a[1].c_str());
+		return false;
+	}
+	if (verb == "UNEQUIP" && a.size() >= 2)
+	{
+		// The inventory's Unequip (the item stays carried)
+		std::string want = lower(spaced(a[1])), want2 = lower(a[1]);
+		for (size_t k = 0; k < s.w.inventory.size(); k++)
+			if (lower(s.w.inventory[k].id) == want || lower(s.w.inventory[k].id) == want2)
+			{
+				if (s.w.inventory[k].equipped)
+				{
+					s.w.inventory[k].equipped = false;
+					s.w.refreshStats();
+				}
+				logf("test: unequipped %s", s.w.inventory[k].id.c_str());
+				return false;
+			}
+		logf("drive: FAIL unequip %s: not carried", a[1].c_str());
 		return false;
 	}
 	if (verb == "ESCORT" && a.size() >= 2)
