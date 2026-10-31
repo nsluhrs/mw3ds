@@ -9,6 +9,9 @@
                                                     (build_cia_mods.py is the same as --mods)
     python tools/build/build_cia.py --no-data       the program only in the CIA (~2 MB); the data stays in out/... for
                                                     copying to sdmc:/3ds/mw3ds/data
+    python tools/build/build_cia.py --data out/tr   a different converted data folder, packed as it is; the CIA is
+                                                    named after it, build/mw3ds-tr.cia (a set too big for a CIA ships
+                                                    its data on the card: tools/build/build_tr_sdmc.py)
     python tools/build/build_cia.py --prebuilt      pack the mw3ds.elf / mw3ds.smdh already in the repo root instead of
                                                     building them (the release converter, tools/release, uses this)
     python tools/build/build_cia.py --tribunal      with the Tribunal add-on (Tribunal.esm after Morrowind.esm): data in
@@ -119,7 +122,7 @@ def fetch_mods(old3ds=False):
 
 
 def run(small=False, skip_convert=False, old3ds=False, mods=False, fetch_only=False, no_data=False, prebuilt=False,
-        tribunal=False, bloodmoon=False):
+        tribunal=False, bloodmoon=False, data_dir=""):
     os.chdir(ROOT)
     mwtools.load_env()
     if tribunal:
@@ -144,8 +147,11 @@ def run(small=False, skip_convert=False, old3ds=False, mods=False, fetch_only=Fa
         raise SystemExit(f"makerom not found in {ctr}")
 
     data, cia = names(old3ds, tribunal, bloodmoon)
-    if tribunal or bloodmoon or old3ds:
-        os.environ["MW3DS_OUT"] = data
+    if data_dir:
+        # pack this converted folder as it is, the CIA named after it: out/tr becomes build/mw3ds-tr.cia
+        data, cia = data_dir, f"build/mw3ds-{Path(data_dir).name}.cia"
+    if data_dir or tribunal or bloodmoon or old3ds:
+        os.environ["MW3DS_OUT"] = data     # the converter writes where the CIA will read from
     convert_args = [] if small else ["--world"]
     if old3ds:
         convert_args += ["--max-tex", "128", "--mips", "few"]
@@ -190,9 +196,11 @@ def main(mods=False):
     ap.add_argument("--prebuilt", action="store_true")
     ap.add_argument("--tribunal", action="store_true")
     ap.add_argument("--bloodmoon", action="store_true")
+    ap.add_argument("--data", default="", metavar="DIR", help="pack this converted data folder as it is (no converting); "
+                    "the CIA is named after it (out/tr: build/mw3ds-tr.cia)")
     a = ap.parse_args()
     return run(a.small, a.skip_convert, a.old3ds, mods or getattr(a, "mods", False), a.fetch_only, a.no_data, a.prebuilt,
-               a.tribunal, a.bloodmoon)
+               a.tribunal, a.bloodmoon, a.data)
 
 
 if __name__ == "__main__":
