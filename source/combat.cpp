@@ -1868,8 +1868,9 @@ void Session::npcCombat(int ri, float dt)
 				else
 					npcSummonRelease(ri, sp);
 			}
-			if (a)
-				a->showWeapon = wpn != nullptr;
+			// The summon's spawn may have grown the cell's actor list and moved it: ask again
+			if (Actor* aa = w.actorOf(ri))
+				aa->showWeapon = wpn != nullptr;
 		}
 		else if (r.castSpell >= 0)
 		{
