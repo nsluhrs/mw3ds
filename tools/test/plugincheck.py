@@ -64,13 +64,15 @@ def main():
         sys.exit("plugincheck: no plugins to check in " + str(DATA_FILES))
     print("plugins:", "; ".join(plugins))
 
-    # The master alone: the merge gives back exactly what the file holds
-    mwfiles.PLUGINS, mwfiles._merged = [], None
+    # The master alone: the merge gives back exactly what the file holds (the expansions and plugins stay out)
+    mwfiles.PLUGINS, mwfiles.EXPANSIONS, mwfiles._merged = [], [], None
     raw = [r for r in read_records(DATA_FILES / MASTER) if r.tag != "TES3"]
     alone = mwfiles._merge()
     same = len(raw) == len(alone) and sorted(map(repr, ((r.tag, r.id) for r in raw))) == \
         sorted(map(repr, ((r.tag, r.id) for r in alone)))
     check(same, f"{MASTER} alone: the merge holds its {len(raw)} records")
+    mwfiles.EXPANSIONS = [DATA_FILES / n for n in ("Tribunal.esm", "Bloodmoon.esm")
+                          if os.environ.get("MW3DS_EXPANSIONS", "").strip() not in ("", "0") and (DATA_FILES / n).is_file()]
 
     mwfiles.PLUGINS, mwfiles._merged = plugins, None
     order = mwfiles.load_order()
@@ -158,32 +160,33 @@ def main():
         moved_place += kept != expect
     check(moved_place == 0, "cells: master references keep their order")
 
-    # 3. Dialogue: each plugin INFO sits after the one its PNAM names (first when empty), deleted ones are gone
-    misplaced, placed, gone = [], 0, 0
-    chains = {d["name"].lower(): [i.zstr("INAM") for i in d["infos"]] for d in db["dialogue"]}
-    final_info = {}
-    for path in order[1:]:
-        topic = None
-        for r in read_records(path, {"DIAL", "INFO"}):
-            if r.tag == "DIAL":
-                topic = r.id.lower()
-            elif topic:
-                final_info[(topic, r.zstr("INAM"))] = r
-    for (topic, inam), r in final_info.items():
-        chain = chains.get(topic, [])
-        if r.get("DELE") is not None:
-            gone += 1
-            if inam in chain:
-                misplaced.append((topic, inam, "deleted kept"))
-            continue
-        if inam not in chain:
-            misplaced.append((topic, inam, "missing"))
-            continue
-        i, prev = chain.index(inam), r.zstr("PNAM") or ""
-        if (chain[i - 1] if i else "") != prev and prev in chain:
-            misplaced.append((topic, inam, "not after its PNAM"))
-        placed += 1
-    check(not misplaced, f"dialogue: {placed} plugin responses after their PNAM, {gone} deleted"
+    # 3. Dialogue: in the merged chain every response comes after the one its PNAM names, and one naming an INFO
+    # that is gone sits last (OpenMW's InfoOrder). Not necessarily right after: a later INFO naming the same PNAM
+    # splices in first, its earlier siblings staying behind it (std::list::splice after the named one). An INFO
+    # with no PNAM goes first only when it is new; an existing one re-inserted (TR rebuilds vanilla topics with
+    # chains of its own) keeps its place, so no rule. Deleted INFOs are out of the chain.
+    misplaced, placed = [], 0
+    master_info = set()
+    topic = None
+    for r in read_records(DATA_FILES / MASTER, {"DIAL", "INFO"}):
+        if r.tag == "DIAL":
+            topic = (r.id or "").lower()
+        elif topic:
+            master_info.add((topic, r.zstr("INAM")))
+    for d in db["dialogue"]:
+        chain = [i.zstr("INAM") for i in d["infos"]]
+        pos = {n: k for k, n in enumerate(chain)}
+        for i in d["infos"]:
+            inam, prev = i.zstr("INAM"), i.zstr("PNAM") or ""
+            if (d["name"].lower(), inam) not in master_info:
+                placed += 1
+            if i.get("DELE") is not None and inam in pos:
+                misplaced.append((d["name"], inam, "deleted kept"))
+            elif prev and prev in pos and pos[prev] >= pos[inam]:
+                misplaced.append((d["name"], inam, "not after its PNAM"))
+            elif prev and prev not in pos and pos[inam] != len(chain) - 1:
+                misplaced.append((d["name"], inam, "unknown PNAM not last"))
+    check(not misplaced, f"dialogue: {placed} plugin responses after their PNAM"
           f"{' ' + str(misplaced[:3]) if misplaced else ''}")
 
     # 4. Land: a plugin's LAND names its own LTEX records by index; the merged one names the same textures
