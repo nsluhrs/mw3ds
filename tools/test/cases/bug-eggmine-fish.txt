@@ -1,0 +1,17 @@
+# Inanius Egg Mine: the two slaughterfish (they only swim: afloat 0x10, wander 1000) start in the
+# flooded pit at z -44, the water at 112. Log where they are when the cell loads and as they wander:
+# they walk out of the water onto the dry walkways (ORI Coordinates z > 112, the floor there too).
+3 0 0 0 0 MSG
+0.3 0 0 0 0 GOD
+0.3 0 0 0 0 GOTO:Inanius_Egg_Mine
+3 0 0 0
+0.3 0 0 0 0 CONSEL:slaughterfish
+0.3 0 0 0 0 CON:ORI
+90 0 0 0
+0.3 0 0 0 0 CON:ORI
+90 0 0 0
+0.3 0 0 0 0 CON:ORI
+90 0 0 0
+0.3 0 0 0 0 CON:ORI
+90 0 0 0
+0.3 0 0 0 0 CON:ORI

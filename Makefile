@@ -61,6 +61,9 @@ CFLAGS	:=	-g -Wall -O3 -flto=auto -fomit-frame-pointer -fno-math-errno -mword-re
 CFLAGS	+=	$(INCLUDE) -D__3DS__
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++20
+# The build's version inside the program: a bug report says which build it came from (source/bugreport.cpp).
+# The same string the SMDH and the CIA title get: the git tag, or "dev" with no tag (Makefile:38)
+CXXFLAGS	+=	-DMW3DS_VERSION='"$(MW3DS_VERSION)"'
 
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=3dsx.specs -g -O3 -flto=auto $(ARCH) -Wl,-Map,$(notdir $*.map) \

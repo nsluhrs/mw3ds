@@ -1,0 +1,25 @@
+# Recall from Vivec's Foreign Quarter Waistworks (a big Tribunal interior) to a Mark in Balmora
+# (exterior): the cell swap must not run the memory out (the floor then misses and the player falls).
+# MEMLEAVE:8000 squeezes the linear heap to 8 MB first, the way a long session with the deferred frees has it.
+# The Mark and the Recall are both made "use" enchantments: item casts never fail a skill roll
+# (a scroll's effect sits in its enchantment, which the harness USE: step would not fire).
+# start: Seyda Neen
+3 0 0 0 0 MSG
+0.3 0 0 0 0 GOTO:Balmora
+15 0 0 0
+0.3 0 0 0 0 ADDEFFECT:60:1:1:1:0
+0.3 0 0 0 0 MAKEITEM:sc_mark:mark_use:use
+0.3 0 0 0 0 USEMADE
+2 0 0 0
+0.3 0 0 0 0 GOTO:Vivec,_Foreign_Quarter_Lower_Waistworks
+25 0 0 0
+0.3 0 0 0 0 ADDEFFECT:61:1:1:1:0
+0.3 0 0 0 0 MAKEITEM:sc_mark:recall_use:use
+0.3 0 0 0 0 MEMLEAVE:8000
+0.3 0 0 0 0 USEMADE
+20 0 0 0
+0.3 0 0 0 0 MEMHOLD:0
+0.2 0 0 0 0 SHOT
+0.3 0 0 0 0 EXPECT:cell:Balmora
+0.3 0 0 0 0 EXPECT:health:gt:1
+0.3 0 0 0 0 QUIT

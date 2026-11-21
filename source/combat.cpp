@@ -621,16 +621,23 @@ void Session::playerDies()
 	for (auto& r : w.refs)
 		r.ai = AI_IDLE;
 	logf("combat: player died");
-	// (the saves are listed here once: reading them every frame of the screen cost 70 ms a frame)
+	// The last save written, by the count each .meta carries rather than by the console's clock: a clock reset or set
+	// back leaves the saves made after it older by their time than the ones made before. (The saves are listed here
+	// once: reading them every frame of the screen cost 70 ms a frame)
 	deathSave.clear();
-	u64 newest = 0;
+	u32 newestOrder = 0;
+	u64 newestTime = 0;
 	std::vector<SaveInfo> saves = savesList(dataDir);
 	for (const SaveInfo& sv : saves)
-		if (!sv.bundled && (deathSave.empty() || sv.time > newest))
-		{
-			deathSave = sv.path;
-			newest = sv.time;
-		}
+	{
+		if (sv.bundled)
+			continue;                 // (the starting points came with the game: the player never wrote one)
+		if (!deathSave.empty() && (sv.order < newestOrder || (sv.order == newestOrder && sv.time <= newestTime)))
+			continue;                 // (older by its count, or by its time where the counts are the same)
+		deathSave = sv.path;
+		newestOrder = sv.order;
+		newestTime = sv.time;
+	}
 	deathAnySave = !saves.empty();
 	openScreen(SCR_DEATH);
 }

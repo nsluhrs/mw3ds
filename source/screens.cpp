@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include "audio.h"
+#include "bugreport.h"
 #include "gamma.h"
 #include "linear.h"
 #include "log.h"
@@ -459,14 +460,19 @@ void Session::drawGameMenu()
 	auto cg = w.globals.find("chargenstate");
 	bool rest = (w.menusEnabled & MENU_REST) || !w.game.chargen || (cg != w.globals.end() && cg->second == -1.0f);
 	std::vector<std::string> labels = { "Return to game", "Save / Load", w.game.gmst("srestmenuxbox", "Rest / Wait"),
-		w.game.gmst("soptions", "Options"), "Save and quit" };
-	bool enabled[5] = { true, !wantName, rest, true, pendingMenus.empty() };
+		w.game.gmst("soptions", "Options"), "Report a bug", "Save and quit" };
+	bool enabled[6] = { true, !wantName, rest, true, true, pendingMenus.empty() };
 	int n = labels.size();
 	if (in.down & KEY_DOWN) focus = (focus + 1) % n;
 	if (in.down & KEY_UP) focus = (focus + n - 1) % n;
 	int hit = -1;
+	// The four rows a player knows stay exactly where they were (the test cases tap them by screen position,
+	// and muscle memory does too); the two added below them are 26 high, because the bottom screen is 240
+	// tall and leaves 52 px under Options. A list that scrolled instead would hide "Save and quit".
+	static const float kRowY[6] = { 32, 72, 112, 152, 188, 214 };
+	static const float kRowH[6] = { 34, 34, 34, 34, 26, 26 };
 	for (int i = 0; i < n; i++)
-		if (uiButton(50, 32 + i * 40, 220, 34, labels[i], i == focus, enabled[i]))
+		if (uiButton(50, kRowY[i], 220, kRowH[i], labels[i], i == focus, enabled[i]))
 			hit = i;
 	if (hit == 0 || (in.down & KEY_B))
 		closeScreen();
@@ -488,6 +494,12 @@ void Session::drawGameMenu()
 		openScreen(SCR_OPTIONS);
 	}
 	else if (hit == 4)
+	{
+		// The menu stays open: the screenshot taken with the report shows the place (the top screen's view
+		// and this menu's header, which names it) rather than the game without its context
+		bugReportPrompt(*this);
+	}
+	else if (hit == 5)
 		quitSaving = 1;
 }
 
@@ -607,8 +619,9 @@ void Session::drawOptions()
 			g_subtitles = !g_subtitles;
 			notify(g_subtitles ? "Subtitles on." : "Subtitles off: spoken lines are only heard.");
 		}
-		// Console: OpenMW's, one script line at a time, on the object the crosshair was on; Credits: Morrowind's movie
-		int extra = buttons(170, 26, { "Console", "Credits" });
+		// Console: OpenMW's, one script line at a time, on the object the crosshair was on; Credits: Morrowind's movie;
+		// Reset NPCs: people who wandered off and got stuck (as into the water) back where the level placed them
+		int extra = buttons(170, 26, { "Console", "Credits", "Reset NPCs" });
 		b = buttons(208, 28, { "Default", w.game.gmstLabel("sclose", "Close") });
 		closing = b == 1;
 		if (extra == 0)
@@ -630,6 +643,14 @@ void Session::drawOptions()
 			else
 				notify("The credits movie is missing: Video\\mw_credits.bik was not converted with the game data.");
 			return;
+		}
+		// Reset NPCs: everyone back where the level placed them, in memory and in the state a save kept for
+		// the cells out of it (the stuck people in the Balmora water walk home, and the next save forgets the wander)
+		if (extra == 2)
+		{
+			int n = w.resetNpcPositions();
+			notify(n == 1 ? "1 NPC sent back to where the level placed them."
+				: std::to_string(n) + " NPCs sent back to where the level placed them.");
 		}
 		if (b == 0)
 		{

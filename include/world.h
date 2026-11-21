@@ -553,6 +553,10 @@ struct World
 	std::unordered_map<std::string, StoredCell> cellStates;   // cell file -> its changes
 	void storeCellState(const std::string& file, const std::string& json);
 	std::string cellStateJson(const StoredCell& s) const;     // "" when it won't unpack
+	// Options > Prefs' Reset NPCs: every NPC back to where the level placed them (people who wandered off
+	// and got stuck, as into water), in memory and in the state kept for the cells out of it: their saved
+	// positions go with them, so the next save forgets the wander. Returns how many were sent back.
+	int resetNpcPositions();
 	std::unordered_map<std::string, int> deadCounts;           // lowercase id -> killed (GetDeadCount)
 	std::vector<std::pair<int, int>> freeRefs, freePaths;      // slot ranges evicted cells left (first, count)
 	// findRef's index: (interned lower-case id, slot), sorted; rebuilt on the next lookup after references came, went or

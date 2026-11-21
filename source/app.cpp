@@ -1051,12 +1051,15 @@ int appMain()
 				bool search = session->wantText == Session::TEXT_SEARCH;
 				bool console = session->wantText == Session::TEXT_CONSOLE;      // a script line (Options > Console)
 				bool classDesc = session->wantText == Session::TEXT_CLASSDESC;  // the made class's description (may be empty)
-				swkbdInit(&kb, SWKBD_TYPE_NORMAL, 2, console || classDesc ? 200 : 31);
+				bool report = session->wantText == Session::TEXT_BUGREPORT;     // what went wrong (the game menu's button)
+				swkbdInit(&kb, SWKBD_TYPE_NORMAL, 2, console || classDesc || report ? 200 : 31);
 				swkbdSetHintText(&kb, console ? "Script line, e.g. Player->AddItem gold_001 100" : search ? "Search"
-					: classDesc ? "Describe your class" : session->wantText == Session::TEXT_CLASSNAME ? "Name your class"
+					: classDesc ? "Describe your class" : report ? "What went wrong?"
+					: session->wantText == Session::TEXT_CLASSNAME ? "Name your class"
 					: session->screen == SCR_ENCHANT ? "Name the item" : "Name the spell");
 				swkbdSetInitialText(&kb, session->textNow().c_str());
-				if (!search && !console && !classDesc)
+				// A report may be left blank: the position, cell and warnings are filed anyway
+				if (!search && !console && !classDesc && !report)
 					swkbdSetValidation(&kb, SWKBD_NOTEMPTY_NOTBLANK, 0, 0);
 				SwkbdButton button = swkbdInputText(&kb, text, sizeof(text));
 				session->setText(button == SWKBD_BUTTON_CONFIRM, text);
@@ -1222,6 +1225,14 @@ int appMain()
 		{
 			logf("drive: screenshot %s %s", driver.failShot.c_str(), screenshotSave(driver.failShot.c_str()) ? "saved" : "FAILED");
 			driver.failShot.clear();
+		}
+		// A bug report's screenshot: named when the report was filed (bugreport.cpp), taken here because the
+		// frame just drawn, the place as the player saw it, is the one worth keeping
+		else if (!session->reportShot.empty())
+		{
+			logf("report: screenshot %s %s", session->reportShot.c_str(),
+				screenshotSave(session->reportShot.c_str()) ? "saved" : "FAILED");
+			session->reportShot.clear();
 		}
 		// MW3DS_FAILFAST=1 (the PC test build): the run ends at its first failure (after its screenshot): a fix is tried on
 		// that, not on the failures it drags after it, each a step running to its limit. Never on the console

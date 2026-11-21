@@ -1,0 +1,30 @@
+# The death screen's "Load last save" is the save written last, by the count in each save's .meta and not by the
+# console's clock: the clock can be reset or set back, and then the save made after it is older by its time than
+# the ones made before it (the list itself has followed the count since bdaeba8; the death screen was left behind)
+3 0 0 0 0 MSG
+0.3 0 0 0 0 GOTO:Balmora,_Guild_of_Mages
+8 0 0 0
+0.3 0 0 0 0 SCREEN:saves
+0.5 0 0 0
+0.3 0 0 0 0 A
+1 0 0 0
+0.3 0 0 0 0 SCREEN:none
+1 0 0 0
+# the clock goes back a month, and a save is made in another place
+0.3 0 0 0 0 CLOCKSHIFT:-720
+0.3 0 0 0 0 GOTO:Balmora,_South_Wall_Cornerclub
+8 0 0 0
+0.3 0 0 0 0 SCREEN:saves
+0.5 0 0 0
+0.3 0 0 0 0 A
+1 0 0 0
+0.3 0 0 0 0 SCREEN:none
+1 0 0 0
+0.3 0 0 0 0 SETHEALTH:0
+3 0 0 0
+0.1 0 0 0 0 EXPECT:screen:death
+0.1 0 0 0 0 EXPECT:button:Load%last%save
+0.3 0 0 0 0 A
+8 0 0 0
+0.3 0 0 0 0 EXPECT:cell:Balmora,_South_Wall_Cornerclub
+3 0 0 0

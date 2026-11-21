@@ -699,7 +699,9 @@ int uiList(UiList& list, float x, float y, float w, float h, const std::vector<s
 		float ry = y + i * rowH - list.scroll;
 		if (ry + rowH < y || ry > y + h)
 			continue;
-		bool sel = (int)i == list.selected && keys;
+		// (the row stays highlighted with the keys off: a box over the list names the row it is about, and the
+		// player needs to see which one that is)
+		bool sel = (int)i == list.selected;
 		u32 colour = sel ? col::textOver : col::text;
 		if (sel)
 			uiRect(x, ry, w, rowH, col::select);
@@ -738,7 +740,9 @@ int uiList(UiList& list, float x, float y, float w, float h, const std::vector<s
 			}
 			C3D_SetScissor(GPU_SCISSOR_NORMAL, (u32)(240 - (y + h)), (u32)(320 - (x + w)), (u32)(240 - y), (u32)(320 - x));
 		}
-		if (uiHit(x, fmaxf(ry, y), w, fminf(rowH, y + h - ry)))
+		// (with the keys off a box has the input, and its buttons sit over these rows: the tap that answers the
+		// box must not also pick the row underneath it)
+		if (keys && uiHit(x, fmaxf(ry, y), w, fminf(rowH, y + h - ry)))
 		{
 			list.selected = i;
 			result = i;
@@ -1081,7 +1085,7 @@ void uiDrawPage(const UiPage& page, float x, float y, float w, float scale, u32 
 		drawPageBlock(b, x, y + b.y, w, scale, color);
 }
 
-int uiItemGrid(UiGrid& grid, float x, float y, float w, float h, const std::vector<UiGridItem>& items, bool keys)
+int uiItemGrid(UiGrid& grid, float x, float y, float w, float h, const std::vector<UiGridItem>& items, bool keys, bool wrap)
 {
 	const float cell = 36.0f;
 	int cols = w / cell > 1 ? (int)(w / cell) : 1;
@@ -1099,8 +1103,21 @@ int uiItemGrid(UiGrid& grid, float x, float y, float w, float h, const std::vect
 		int sel = grid.selected;
 		if (s_in.down & KEY_RIGHT) sel = sel + 1 < n ? sel + 1 : sel;
 		if (s_in.down & KEY_LEFT) sel = sel > 0 ? sel - 1 : sel;
-		if (s_in.down & KEY_DOWN) sel = sel + cols < n ? sel + cols : sel;
-		if (s_in.down & KEY_UP) sel = sel - cols >= 0 ? sel - cols : sel;
+		if (s_in.down & KEY_DOWN)
+		{
+			if (sel + cols < n) sel += cols;
+			else if (wrap)      // the inventory's down from the bottom row lands on the top row, same column
+				sel %= cols;    // a column the short bottom row lacks returns from its last row all the same
+		}
+		if (s_in.down & KEY_UP)
+		{
+			if (sel - cols >= 0) sel -= cols;
+			else if (wrap)      // the inventory's up from the top row lands on the bottom row, same column
+			{
+				int to = ((n - 1) / cols) * cols + sel % cols;
+				sel = to < n ? to : n - 1;    // the bottom row can be short
+			}
+		}
 		if (sel != grid.selected)
 		{
 			grid.selected = sel;

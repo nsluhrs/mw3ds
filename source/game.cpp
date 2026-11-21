@@ -486,14 +486,67 @@ void scriptExprFromJson(const cJSON* j, Node& n, const Script* scope)
 	convertExpr(j, n, scope);
 }
 
-static bool treeCalls(const Node& n, const char* func)
+// Whether a script block's JSON calls that function (mwscript.py's shapes: a call is ["c", ref, name, args]).
+// The load wants the flags without compiling the tree: the tree itself waits for the script's first run
+static bool jsonCalls(const cJSON* n, const char* func)
 {
-	if (n.kind == N_CALL && n.b == func)
-		return true;
-	for (auto& k : n.kids)
-		if (treeCalls(k, func))
+	if (!cJSON_IsArray(n))
+		return false;
+	const cJSON* tag = cJSON_GetArrayItem(n, 0);
+	if (cJSON_IsString(tag) && !strcmp(tag->valuestring, "c"))
+	{
+		const cJSON* name = cJSON_GetArrayItem(n, 2);
+		if (cJSON_IsString(name) && !strcmp(name->valuestring, func))
+			return true;
+	}
+	for (const cJSON* k = n->child; k; k = k->next)
+		if (jsonCalls(k, func))
 			return true;
 	return false;
+}
+
+// A script block's JSON as compact text on the card, next to the long texts (an empty block stores nothing)
+static CardText storeJson(const cJSON* j)
+{
+	if (!j || !cJSON_IsArray(j) || !j->child)
+		return CardText();
+	char* txt = cJSON_PrintUnformatted(j);
+	CardText t = CardText::store(txt ? txt : "");
+	free(txt);
+	return t;
+}
+
+// The compiled body of a script: compiled from the card the first time it runs, kept until the heap runs out
+// (Session::relieveMemory frees the ones no running instance needs) and compiled again when one next runs
+const Node* scriptBody(const Script* s)
+{
+	if (!s)
+		return nullptr;
+	if (!s->compiled)
+	{
+		Node* n = new Node;
+		std::string text = s->body.str();
+		if (cJSON* j = cJSON_Parse(text.c_str()))
+		{
+			scriptBlockFromJson(j, *n, s);
+			cJSON_Delete(j);
+		}
+		s->compiled = n;
+	}
+	return s->compiled;
+}
+
+// A dialogue result script: compiled from the card for the one saying it, and gone when the run is done
+Node scriptCompile(const CardText& text, const Script* scope)
+{
+	Node n;
+	std::string src = text.str();
+	if (cJSON* j = cJSON_Parse(src.c_str()))
+	{
+		scriptBlockFromJson(j, n, scope);
+		cJSON_Delete(j);
+	}
+	return n;
 }
 
 // ---- Loading
@@ -539,7 +592,8 @@ static const cJSON* sectionFile(const std::string& file, const char* name)
 	free(text);
 	if (!s_section)
 	{
-		logf("game: %s: JSON parse error", path.c_str());
+		// (cJSON fails when its own allocations do too: with the heap nearly full this is the heap, not the file)
+		logf("game: %s: JSON parse error, heap used %d KB", path.c_str(), mallinfo().uordblks / 1024);
 		return nullptr;
 	}
 	logf("game: %s (%u KB), heap used %d KB", file.c_str(), (unsigned)(size / 1024), mallinfo().uordblks / 1024);
@@ -613,10 +667,16 @@ static void storeTexts(const cJSON* root)
 	forSection(root, "objects", [&](const cJSON* it) {
 		CardText::store(str(it, "text"));
 	});
+	forSection(root, "scripts", [&](const cJSON* it) {
+		storeJson(arr(it, "body"));
+	});
 	forSection(root, "dialogue", [&](const cJSON* it) {
 		const cJSON* ij;
 		cJSON_ArrayForEach(ij, arr(it, "infos"))
+		{
 			CardText::store(str(ij, "text"));
+			storeJson(arr(ij, "script"));
+		}
 	});
 	forSection(root, "journal", [&](const cJSON* it) {
 		const cJSON* e;
@@ -683,12 +743,14 @@ bool gameLoad(GameData& g, const char* path)
 	}
 	logf("game: parsing %u KB, heap used %d KB", (unsigned)(size / 1024), mallinfo().uordblks / 1024);
 	cJSON* root = cJSON_Parse(text);
-	free(text);
 	if (!root)
 	{
+		// (before the free: the error pointer points into text)
 		logf("game: JSON parse error near %.40s", cJSON_GetErrorPtr());
+		free(text);
 		return false;
 	}
+	free(text);
 	CardText::loadBegin();
 
 	const cJSON* it0;
@@ -839,9 +901,10 @@ bool gameLoad(GameData& g, const char* path)
 			s.localTypes.push_back(cJSON_GetArrayItem(l, 0)->valuestring[0]);
 			s.localNames.push_back(cJSON_GetArrayItem(l, 1)->valuestring);
 		}
-		convertBlock(arr(it, "body"), s.body, &s);
-		s.usesOnActivate = treeCalls(s.body, "onactivate");
-		s.scriptedHits = treeCalls(s.body, "hitonme") || treeCalls(s.body, "sethealth");
+		const cJSON* body = arr(it, "body");
+		s.usesOnActivate = jsonCalls(body, "onactivate");
+		s.scriptedHits = jsonCalls(body, "hitonme") || jsonCalls(body, "sethealth");
+		s.body = storeJson(body);
 	});
 
 	forSection(root, "dialogue", [&](const cJSON* it) {
@@ -885,7 +948,7 @@ bool gameLoad(GameData& g, const char* path)
 				cond.value = (float)cJSON_GetArrayItem(c, 3)->valuedouble;
 				info.conds.push_back(cond);
 			}
-			convertBlock(arr(ij, "script"), info.script, nullptr);
+			info.script = storeJson(arr(ij, "script"));
 			t.infos.push_back(std::move(info));
 		}
 		g.topics.push_back(std::move(t));

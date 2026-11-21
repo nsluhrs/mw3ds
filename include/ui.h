@@ -75,8 +75,9 @@ void uiBar(float x, float y, float w, float h, float frac, u32 color);
 bool uiButton(float x, float y, float w, float h, const std::string& label, bool focused = false, bool enabled = true);
 bool uiHit(float x, float y, float w, float h);          // tapped inside this rectangle
 
-// Scrollable list of rows. Returns the tapped row, or -1. `selected` is highlighted and
-// moved by D-pad up/down when `keys` is set; A activates it.
+// Scrollable list of rows. Returns the tapped row, or -1. `selected` is highlighted either way; with `keys` set
+// D-pad up/down moves it, A activates it and a tap picks the row under the finger. Without `keys` the list sits
+// behind a box that has the input: it draws its rows and scrolls to a drag, but takes neither keys nor taps.
 struct UiList
 {
 	float scroll = 0.0f;
@@ -94,6 +95,8 @@ int uiList(UiList& list, float x, float y, float w, float h, const std::vector<s
 
 // Grid of item icons, Morrowind inventory style: count in the corner, equipped / magic backgrounds.
 // D-pad moves the selection, drag scrolls; returns the tapped cell (or the selected one on A), else -1.
+// wrap: up from the top row lands on the bottom row's same column, down from the bottom row on the top row's
+// (the inventory's, as on a list)
 enum { UIGRID_EQUIPPED = 1, UIGRID_MAGIC = 2, UIGRID_DIM = 4 };
 struct UiGridItem { int icon; int count; u32 flags; std::string label; };   // label: shown when no icon
 struct UiGrid
@@ -101,7 +104,7 @@ struct UiGrid
 	float scroll = 0.0f;
 	int selected = 0;
 };
-int uiItemGrid(UiGrid& grid, float x, float y, float w, float h, const std::vector<UiGridItem>& items, bool keys = true);
+int uiItemGrid(UiGrid& grid, float x, float y, float w, float h, const std::vector<UiGridItem>& items, bool keys = true, bool wrap = false);
 
 // Scrollable wrapped text box; drag or D-pad to scroll.
 struct UiScroll { float scroll = 0.0f; };

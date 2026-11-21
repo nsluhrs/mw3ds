@@ -2213,7 +2213,8 @@ void scriptsRun(World& w, ScriptHost& host, float dt, bool globalOnly)
 				w.scripts[i].targetCell.clear();
 			}
 			Ctx c{ w, host, (int)i, ref >= 0 || !w.scripts[i].item.empty() ? ref : w.scripts[i].target, dt };
-			exec(c, w.scripts[i].script->body);
+			if (const Node* body = scriptBody(w.scripts[i].script))
+				exec(c, *body);
 			// OnActivate lasts one frame; OnPCAdd / OnPCEquip stay set until the script clears them
 			w.scripts[i].activated = false;
 		}

@@ -182,6 +182,28 @@ Report them as [GitHub issues](../../issues) and say it was an Old 3DS. Attach `
 `crash.txt` / `watchdog.txt` there if they exist). See [`CONTRIBUTING.md`](CONTRIBUTING.md); never attach game files or
 builds.
 
+### Pulling saves and logs off the console
+
+Boot with **Select held** (Luma3DS's FTP server, `ftpd`, comes up on the console's IP, port **5000**, anonymous
+login, the SD card as its root). The game's folder is `3ds/mw3ds/`: saves in `3ds/mw3ds/saves/save_NNN.json`
+(newest number last; each has a `.json.meta` with the character name and cell), plus `log.txt`, `watchdog.txt` and
+`crash.txt` next to them.
+
+```sh
+curl -s "ftp://<console-ip>:5000/3ds/mw3ds/saves/"                          # list the saves
+curl -s "ftp://<console-ip>:5000/3ds/mw3ds/saves/save_034.json" -o save.json
+```
+
+`ftpd` is slow and single-threaded, and it stops serving while the console sleeps: keep the console awake, one
+transfer at a time, and check the byte count against the size in the listing — a stalled transfer can end short
+without an error, so fetch again until the size matches. Saves are zlib-compressed despite the `.json` name
+(`MWZ1`: the magic, a u32 original size, then the stream):
+
+```sh
+python3 -c "import zlib,sys; d=open('save.json','rb').read(); sys.stdout.buffer.write(
+    zlib.decompress(d[8:]) if d[:4]==b'MWZ1' else d)" > save_plain.json     # 177 KB becomes ~180 KB of JSON
+```
+
 ## The optimization mods
 
 The builds above lay two community mods over your game files: the

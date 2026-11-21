@@ -28,20 +28,24 @@ static std::vector<std::string> jsonFiles(const std::string& dir);
 void writeSaveMeta(const char* savePath, const std::string& name, const std::string& place, int level, u64 timeMs)
 {
 	timeMs += g_saveClockShiftMs;
-	// The save's count, one past the highest of the player's saves: the list is ordered by it, as the console's clock
-	// can be reset or set back (a save made then sorted below older ones by its time)
+	// The save's count, one past the highest of the saves on the card, the autosave with them: the list is ordered by
+	// it, and so is the death screen's "Load last save", as the console's clock can be reset or set back (a save made
+	// then would sort below the older ones by its time)
 	u32 order = 0;
-	if (strcmp(savePath, kAutosavePath) != 0)
-	{
+	bool autosave = strcmp(savePath, kAutosavePath) == 0;
+	if (!autosave)
 		g_lastSavePath = savePath;
-		for (auto& p : jsonFiles(kSaveDir))
-		{
-			SaveInfo s;
-			if (p != savePath && readInfo(p, s) && s.order > order)
-				order = s.order;
-		}
-		order++;
+	// (a save's own count is not read back here: its .meta is the one written below)
+	SaveInfo autoSave;
+	if (!autosave && readInfo(kAutosavePath, autoSave) && autoSave.order > order)
+		order = autoSave.order;
+	for (auto& p : jsonFiles(kSaveDir))
+	{
+		SaveInfo s;
+		if (p != savePath && readInfo(p, s) && s.order > order)
+			order = s.order;
 	}
+	order++;
 	std::string meta = std::string(savePath) + ".meta";
 	if (FILE* f = fopen(meta.c_str(), "w"))
 	{

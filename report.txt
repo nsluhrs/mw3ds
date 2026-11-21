@@ -1,0 +1,2 @@
+I ran into a collsion at this locaiton with geometery that doesn't seem to be there
+x:-35298.683594, y: -35478.816406, z:1835.432861

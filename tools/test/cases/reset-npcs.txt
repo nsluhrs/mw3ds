@@ -1,0 +1,29 @@
+# Options > Prefs' Reset NPCs: a person moved far off (as if they had wandered into the water and got stuck) goes
+# back to where the level placed them: START, Options, Reset NPCs, and the Gnisis caravaner stands on his strider
+# platform again (the spot the player teleports next to). Twice: once with his cell in memory, once after the player
+# walks far enough away for it to leave memory (the reset then edits the state the save kept for it)
+3 0 0 0 0 MSG
+0.3 0 0 0 0 GOD
+0.3 0 0 0 0 TP:-86650:89300:1060:180
+8 0 0 0
+0.1 0 0 0 0 EXPECT:refdist:punibi_yahaz:lt:300
+0.3 0 0 0 0 PLACEAT:punibi_yahaz:-85150:89300:1060
+0.3 0 0 0 0 EXPECT:refdist:punibi_yahaz:gt:1000
+0.3 0 0 0 0 START
+0.5 0 0 0 0 TAP:160:169
+0.5 0 0 0 0 EXPECT:screen:options+EXPECT:button:Reset%NPCs
+0.3 0 0 0 0 TAP:265:183
+0.3 0 0 0 0 EXPECT:refdist:punibi_yahaz:lt:300
+0.3 0 0 0 0 B
+0.5 0 0 0 0 EXPECT:screen:none
+0.3 0 0 0 0 PLACEAT:punibi_yahaz:-85150:89300:1060
+0.3 0 0 0 0 TP:-86650:80500:1500:180
+8 0 0 0
+0.3 0 0 0 0 START
+0.5 0 0 0 0 TAP:160:169
+0.3 0 0 0 0 TAP:265:183
+0.3 0 0 0 0 B
+0.5 0 0 0 0 EXPECT:screen:none
+0.3 0 0 0 0 TP:-86650:89300:1060:180
+8 0 0 0
+0.1 0 0 0 0 EXPECT:refdist:punibi_yahaz:lt:300

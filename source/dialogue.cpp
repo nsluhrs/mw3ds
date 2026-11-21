@@ -610,7 +610,11 @@ static void respond(Dialogue& d, World& w, ScriptHost& host, const Info& info, c
 	w.currentTopic = logTopic;
 	if (learnFirst)
 		learnTopics(w, info.text, d.ref);
-	scriptRunSnippet(w, host, info.script, d.ref);
+	if (!info.script.empty())
+	{
+		Node result = scriptCompile(info.script, nullptr);
+		scriptRunSnippet(w, host, result, d.ref);
+	}
 	w.currentInfo = -1;
 	// Topics named in the line, after its result script (which may set the stage that gives the speaker an
 	// answer) and from the line as written, before substitution (OpenMW's order)

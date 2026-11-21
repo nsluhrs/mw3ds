@@ -43,11 +43,19 @@ struct Script
 	std::string name;
 	std::vector<std::string> localNames;
 	std::vector<char> localTypes;        // 's', 'l', 'f'
-	Node body;
+	CardText body;                       // (the body's JSON on the card: Tamriel Rebuilt's 5,782 scripts are 6 MB of
+	                                     // trees, and one session's cells never run more than a few hundred of them)
+	mutable Node* compiled = nullptr;  // (the tree, compiled the first time the script runs; relieveMemory
+	                                     // frees the ones no instance runs, and scriptBody compiles it again)
 	bool usesOnActivate = false;         // activation is handed to the script instead of the default action
 	bool scriptedHits = false;           // HitOnMe / SetHealth: the script runs the fight (the Heart of Lorkhan)
 	int localIndex(const std::string& lowerName) const;
 };
+
+// The compiled body of a script: compiled from the card the first time it runs (see Script::compiled)
+const Node* scriptBody(const Script* s);
+// A dialogue result script: compiled from the card for the one saying it, and gone when the run is done
+Node scriptCompile(const CardText& text, const Script* scope);
 
 // ---- Records
 
@@ -110,7 +118,7 @@ struct Info
 	Atom sound;
 	std::vector<Cond> conds;
 	int disposition = 0;
-	Node script;
+	CardText script;                    // (the result script's JSON on the card: compiled when the line is said)
 	int uid = -1;                     // its number in load order (ClearInfoActor remembers it)
 };
 

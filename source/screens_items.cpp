@@ -394,7 +394,7 @@ void Session::drawInventory()
 		const Object* qo = w.game.object(qi.id);
 		assignQuickKey("inv:" + qi.id, qo ? qo->name.str() : qi.id);
 	}
-	int pick = uiItemGrid(grid, 4, 45, 312, 132, cells);
+	int pick = uiItemGrid(grid, 4, 45, 312, 132, cells, true, true);
 	uiText(6, 178, 0.36f, col::textDim, kQuickHint);
 	int sel = grid.selected >= 0 && grid.selected < (int)index.size() ? index[grid.selected] : -1;
 	const Object* o = sel >= 0 ? w.game.object(w.inventory[sel].id) : nullptr;

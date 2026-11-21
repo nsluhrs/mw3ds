@@ -7,6 +7,12 @@ typedef uint32_t u32;
 typedef uint64_t u64;
 typedef int16_t s16;
 typedef int32_t s32;
+// log.h's MarkScope picks the watchdog variable from the current thread (one thread here: the main one)
+struct Thread;
+inline Thread* threadGetCurrent() { return nullptr; }
+// log.h's per-run monitor line (the harness has no log)
+#include <cstdarg>
+inline void monitorOnce(const char*, const char*, ...) {}
 // cell.h's per-cell lock (one thread here)
 typedef int LightLock;
 inline void LightLock_Init(LightLock* l) { *l = 1; }

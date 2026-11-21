@@ -1,0 +1,85 @@
+# The "Delete <save>?" box is drawn over the save list, and its Yes / No buttons sit right on top of its rows.
+# A finger on Yes went through to the list as well: the row under the button became the selection, and that save
+# was deleted rather than the one picked. A list whose keys are off has a box over it, so it takes no taps either.
+# Ten saves: the list has to reach as far down as the Yes button for the tap to land on a row at all.
+1 0 0 0 0 MSG
+3 0 0 0
+0.3 0 0 0 0 GOTO:Balmora,_South_Wall_Cornerclub
+8 0 0 0
+0.3 0 0 0 0 SCREEN:saves
+0.3 0 0 0 0 A
+0.5 0 0 0
+0.3 0 0 0 0 SCREEN:none
+1 0 0 0
+0.3 0 0 0 0 SCREEN:saves
+0.3 0 0 0 0 A
+0.5 0 0 0
+0.3 0 0 0 0 SCREEN:none
+1 0 0 0
+0.3 0 0 0 0 SCREEN:saves
+0.3 0 0 0 0 A
+0.5 0 0 0
+0.3 0 0 0 0 SCREEN:none
+1 0 0 0
+0.3 0 0 0 0 SCREEN:saves
+0.3 0 0 0 0 A
+0.5 0 0 0
+0.3 0 0 0 0 SCREEN:none
+1 0 0 0
+0.3 0 0 0 0 SCREEN:saves
+0.3 0 0 0 0 A
+0.5 0 0 0
+0.3 0 0 0 0 SCREEN:none
+1 0 0 0
+0.3 0 0 0 0 SCREEN:saves
+0.3 0 0 0 0 A
+0.5 0 0 0
+0.3 0 0 0 0 SCREEN:none
+1 0 0 0
+0.3 0 0 0 0 SCREEN:saves
+0.3 0 0 0 0 A
+0.5 0 0 0
+0.3 0 0 0 0 SCREEN:none
+1 0 0 0
+0.3 0 0 0 0 SCREEN:saves
+0.3 0 0 0 0 A
+0.5 0 0 0
+0.3 0 0 0 0 SCREEN:none
+1 0 0 0
+0.3 0 0 0 0 GOTO:Balmora,_Guild_of_Mages
+8 0 0 0
+0.3 0 0 0 0 SCREEN:saves
+0.3 0 0 0 0 A
+0.5 0 0 0
+0.3 0 0 0 0 SCREEN:none
+1 0 0 0
+0.3 0 0 0 0 GOTO:Balmora,_South_Wall_Cornerclub
+8 0 0 0
+0.3 0 0 0 0 SCREEN:saves
+0.3 0 0 0 0 A
+0.5 0 0 0
+0.3 0 0 0 0 SCREEN:none
+2 0 0 0
+0.3 0 0 0 0 EXPECT:saves:eq:10
+# the second row is the save made in the Guild: pick it with the D-pad, delete it with a finger
+0.3 0 0 0 0 SCREEN:saves
+0.3 0 0 0 0 DOWN
+0.5 0 0 0
+0.3 0 0 0 0 TAP:200:222
+0.5 0 0 0
+0.3 0 0 0 0 EXPECT:deletingsave:eq:1
+0.3 0 0 0 0 TAP:94:146
+0.5 0 0 0
+0.3 0 0 0 0 EXPECT:deletingsave:eq:0
+0.3 0 0 0 0 EXPECT:saves:eq:9
+# the list again from the top: its second row is the save made before the Guild one, in the Cornerclub, because
+# the Guild save is the one that went
+0.3 0 0 0 0 SCREEN:saves
+0.3 0 0 0 0 DOWN
+0.5 0 0 0
+0.3 0 0 0 0 RIGHT
+0.5 0 0 0
+0.3 0 0 0 0 A
+8 0 0 0
+0.3 0 0 0 0 EXPECT:cell:Balmora,_South_Wall_Cornerclub
+3 0 0 0

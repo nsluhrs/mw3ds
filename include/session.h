@@ -97,9 +97,11 @@ struct Session : ScriptHost
 	int buttonPressed = -1;
 	std::vector<ScriptMenu> pendingMenus;
 	bool wantName = false;            // main loop shows the system keyboard between frames
-	enum { TEXT_NONE, TEXT_MAKENAME, TEXT_SEARCH, TEXT_CONSOLE, TEXT_CLASSNAME, TEXT_CLASSDESC };
+	enum { TEXT_NONE, TEXT_MAKENAME, TEXT_SEARCH, TEXT_CONSOLE, TEXT_CLASSNAME, TEXT_CLASSDESC, TEXT_BUGREPORT };
 	int wantText = TEXT_NONE;         // the same, for the name of the spell / item being made, the journal's search or the class being made
 	std::string typedText;            // tests: what the system keyboard returns (TYPE:)
+	std::string reportShot;           // a report's screenshot: named when the report is filed, saved at the next
+	                                  // C3D_FrameBegin (screenshot.h: only there is a frame's transfer finished)
 	int travelCell = -1;              // door to another cell: main loop shows a loading screen, then finishTravel()
 	float travelPos[3] = {}, travelYaw = 0.0f;
 	bool travelToSpawn = false;   // test GOTO into an exterior cell: land at the cell's own spawn spot
