@@ -13,6 +13,7 @@
 #include <cstring>
 
 #include "audio.h"
+#include "bugreport.h"
 #include "gamma.h"
 #include "linear.h"
 #include "log.h"
@@ -25,6 +26,14 @@ static const float kLightBounds = 1.65f;     // OpenMW's light bounds multiplier
 bool Session::start(const char* dataDir, const std::string& startCell, const char* savePathIn)
 {
 	savePath = savePathIn;
+	// "report [what went wrong]" in the console (Options > Console): the engine answers that line itself
+	console.commandHook = [this](ScriptHost& host, const std::string& line) {
+		int n = bugReportCommand(w, *this, line);
+		if (!n)
+			return false;
+		console.print("report " + std::to_string(n) + " added to reports.json");
+		return true;
+	};
 	MARK("load settings");
 	loadSettings();
 	w.memoryLowHook = [this](bool force) { relieveMemory(force); };
@@ -835,6 +844,15 @@ void Session::setText(bool confirmed, const std::string& text)
 		journalSearch = blank ? "" : text;
 		list2 = UiList();
 		logf("journal: search \"%s\"", journalSearch.c_str());
+	}
+	else if (kind == TEXT_BUGREPORT)
+	{
+		// Cancelled: nothing is filed (the player may have opened the keyboard by mistake). An empty
+		// description still files: the position, cell and warnings are the part a player can't write down.
+		if (!confirmed)
+			notify("Bug report not filed.");
+		else
+			bugReportFile(w, *this, text, !autotest);
 	}
 	// the class being made: its name can't be left blank (OpenMW's OK waits for one), its description can
 	else if (kind == TEXT_CLASSNAME && !blank)
