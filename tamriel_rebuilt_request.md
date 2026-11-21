@@ -1,8 +1,8 @@
 # Tamriel Rebuilt on mw3ds — what it took
 
 The base repository does not take pull requests, so this document stands in place of one: it records the
-exact Tamriel Rebuilt release the work was done against, every change the branch `tr-on-main` carries
-(pushed to `nsluhrs/mw3ds`, 10 commits on `main` `e4cd2849`), and the state of the proof.
+exact Tamriel Rebuilt release the work was done against, every change branch `tr-on-main` made for it
+(pushed to `nsluhrs/mw3ds`), and how to reproduce the build.
 
 ## The Tamriel Rebuilt release used (recorded)
 
@@ -19,16 +19,19 @@ exact Tamriel Rebuilt release the work was done against, every change the branch
   added to `.gitignore`).
 - Converted set: `out/tr`, **5.3 GB**, **12,683 cells** (the 3,290 vanilla grid squares plus TR's mainland),
   `game.json` declaring `"plugins": ["tamriel_data.esm", "tr_mainland.esm"]`.
-- Conversion recipe: `.env` with `MW3DS_MORROWIND_DIR` set, the two ESMs in `Data Files`, and
 
-  ```
-  MW3DS_TRIBUNAL=1 MW3DS_BLOODMOON=1 \
-  MW3DS_PLUGINS="Tamriel_Data.esm;TR_Mainland.esm" \
-  python tools/build/build_cia.py --data out/tr --skip-convert   # or convert: drop --skip-convert
-  ```
+## Converting it
 
-  (`MW3DS_OUT` is pointed at the folder by `--data`; `build_game.py` stamps the plugins and add-ons into
-  `game.json` so the engine and the test harness both know what the data holds.)
+`.env` with `MW3DS_MORROWIND_DIR` set and the two TR ESMs in `Data Files`, then:
+
+```
+MW3DS_TRIBUNAL=1 MW3DS_BLOODMOON=1 \
+MW3DS_PLUGINS="Tamriel_Data.esm;TR_Mainland.esm" \
+python tools/build/build_cia.py --data out/tr          # drop nothing: converts and packs
+```
+
+`--data` points `MW3DS_OUT` at the folder and names the CIA after it; `build_game.py` stamps the plugins
+and add-ons into `game.json` so the engine and the test harness both know what the data holds.
 
 ## What the plugin set needed from the converter
 
@@ -46,51 +49,43 @@ exact Tamriel Rebuilt release the work was done against, every change the branch
   `TR_m1_S_Ka_Minhir` — `safe_name` folded them together, so ambiguous ids now get a hash-suffixed `.aml`.
 - **Conversion survivability on Linux** (`f71db0a0`): the cell-worker count reads the free memory on Linux
   too — TR's conversion (the biggest set by far) was picking worker counts that OOM-killed runs.
-- **Honest failure** (`dbd4ccc0`): when `zfile` runs out of heap it says so instead of blaming the file.
+- **Honest failure** (`dbd4ccc0`): when `zfile` runs out of heap it says so instead of blaming the file —
+  what pointed at the worker-count bug during a TR conversion.
 
 ## What the plugin set needed from the engine
 
-- **Add-on rules from the data** — `game.json` `addons` turns Tribunal's and Bloodmoon's engine/script
+- **Add-on rules from the data** — `game.json` `addons` turns Tribunal's and Bloodmoon's engine and script
   rules on for TR data (TR scripts call their functions).
 - **Split `game.json`** — big sections live in `game_<name>_0.json, _1 …` parts and the store
   (`mwworld/esmstore.cpp`) reads one part at a time: a whole parsed `game.json` for a set this size does
   not fit the heap next to the converted data.
-- **Scripts on the card** — compiled script trees spill to `scripts.bin` and read back when a script
-  runs (`mwscript/scriptstore.cpp`); TR's scripts are what pushed this over from nice-to-have to needed.
-- **`game.json` `plugins`** (951f2271) — the data declares what it was converted with; a case marked
+- **Scripts on the card** — compiled script trees spill to `scripts.bin` and read back when a script runs
+  (`mwscript/scriptstore.cpp`); TR's scripts are what pushed this from nice-to-have to needed.
+- **`game.json` `plugins`** (`951f2271`) — the data declares what it was converted with; a case marked
   `# data: plugins` skips, not fails, on vanilla data.
-- Also on the branch, orthogonal to TR: the in-game bug report (`8c21f532`), the physim harness after the
-  component move (`3e34f33e`), and the PC-build `QUIT` verdict fix (`d0239006`).
 
 ## Shipping it: the 4 GB ceiling
 
 TR's 5.3 GB set will never fit a RomFS CIA (makerom's image and the card's FAT32 stop at 4 GB), so it
 ships as a **program-only CIA (~2 MB) plus the data on the card** — the engine already reads
-`sdmc:/3ds/mw3ds/data` when the CIA packed no data. `dc74d1be` adds `build_cia.py --data <dir>` (the CIA
-is named after the folder), and `7ba3049c` adds `tools/build/build_tr_sdmc.py`: packs the program alone
-and stages `out/tr` under a `3ds/` folder for the card with hard links where the disk allows, so nothing
-copies 5.3 GB twice.
+`sdmc:/3ds/mw3ds/data` when the CIA packed no data. `dc74d1be` adds `build_cia.py --data <dir>`, and
+`7ba3049c` adds `tools/build/build_tr_sdmc.py`: packs the program alone and stages `out/tr` under a
+`3ds/` folder for the card with hard links where the disk allows, so nothing copies 5.3 GB twice.
 
-## Proof so far (native PC test build, `out/data` whole island + `out/tr`)
+    python tools/build/build_tr_sdmc.py            # build/mw3ds-tr-sdmc.cia + build/tr-sdmc/3ds to put on the card
 
-- **TR cases**: `tr-smoke` **PASS** — Okur's House (TR-only interior) loads with 0 missing textures, Okur
-  speaks his TR dialogue line, topics learn; `tr-outside` — Hla Oad's cell loads and renders (screenshot
-  verified, 0 missing textures), but flags one real warning: NPC `ilfhild` stuck travelling toward
-  `velfred` on a 2-point path (open TR pathgrid question).
-- **Full vanilla suite** (1,223 cases, `run_native_all`, `out/data`): 828 PASS, 99 FAIL, 262
-  environment-skipped. 87 of the failures are warnings-only verdicts; 8 cases with real expectation
-  failures were clean in the Nov-13 baseline run — the branch's engine delta is the bug-report menu only,
-  so these read as mainline drift between the baseline and `e4cd2849`, not TR regressions (a head-to-head
-  against an unmodified `main` build was cut short when PRs fell out of scope).
-- TR cases run on PC end with `QUIT`, which only a console can fully judge; `d0239006` stopped the PC
-  verdict charging for the console-only `exit: shut down` line.
+## Proof so far (native PC test build, data `out/tr`)
+
+- `tr-smoke`: **PASS** — Okur's House (a TR-only interior) loads with 0 missing textures, Okur speaks his
+  TR dialogue line, its topics learn, the run saves clean.
+- `tr-outside`: Hla Oad's cell loads and renders (screenshot verified, 0 missing textures), with one real
+  warning still open: NPC `ilfhild` stuck travelling toward `velfred` on a 2-point path (TR pathgrid or
+  walkability around Hla Oad).
+- `d0239006`: the PC verdict stopped charging cases for the console-only `exit: shut down` line, which the
+  TR smoke tests (ending in `QUIT`) could otherwise never show.
 
 ## Open items
 
-1. `ilfhild` stuck travel at Hla Oad (TR pathgrid/walkability) — reproduce on hardware too.
-2. Attribute (or fix) the 8 vanilla hard-fails above against a plain `main` build.
-3. Console-side proof pending: ARM CIA build of this layout, the `# run: emulator` exit path, and the
-   5.3 GB staged-card install with FBI.
-4. The Odai Plateau report (`issue-odai-invisible-collision.md`, shipped in `8c21f532`): no collision
-   exists at the reported spot; the stops are the (drawn) fort-under-construction walls — filed with the
-   bug-report feature as the way to catch the next one with context attached.
+1. `ilfhild`'s stuck travel at Hla Oad — reproduce and fix the path around the town.
+2. Console-side proof: the ARM CIA from this data, the staged 5.3 GB card install, and the two TR cases
+   under the emulator/hardware.
