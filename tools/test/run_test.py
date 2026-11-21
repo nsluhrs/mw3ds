@@ -222,7 +222,9 @@ def run(test, start="Balmora", data="out/data", wait=300, app="", emu="", fast=F
     # A case ending in QUIT must leave through the game's exit path to its last line (a crash on the way out left the
     # console on a black screen): the exit line and any crash line are shown with the result
     quit_case = any(QUIT_STEP.search(ln) for ln in inputs)
-    shut_down = (not quit_case) or any("exit: shut down" in ln.lower() for ln in lines)
+    # (the quit's last line only the console/emulator can show: the PC test build already exits at autoinput's
+    # end, in main_native.cpp's platformRunOver, and never runs the QUIT step below it)
+    shut_down = (not quit_case or native) or any("exit: shut down" in ln.lower() for ln in lines)
     if quit_case:
         out += [ln for ln in lines if re.search("exit: shut down|crash: ", ln, re.IGNORECASE)]
     bad = failed + drive + mon + (1 if faults else 0) + (0 if ended else 1) + (0 if shut_down else 1)
