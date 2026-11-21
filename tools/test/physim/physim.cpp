@@ -27,22 +27,28 @@ static bool readCel(const char* path, Cell& cell)
 	fread(magic, 4, 1, f);
 	fread(&version, 4, 1, f);
 	fread(&flags, 4, 1, f);
-	if (memcmp(magic, "MWC1", 4) || version < 6 || version > 7)
+	if (memcmp(magic, "MWC1", 4) || version < 6 || version > 10)
 		return false;
 	cell.flags = flags;
-	fseek(f, 5 * 4 + 8 + 4 + 3 * 4, SEEK_CUR);
+	// CellHeader's tail (spawn, yaw, pitch, ambient, fog, fogDensity), then CellHeaderV4's bounds
+	fseek(f, 5 * 4 + 8 + 4, SEEK_CUR);
+	fseek(f, 3 * 4, SEEK_CUR);
 	fread(cell.bounds, 4, 4, f);
 	u32 n;
 	fread(&n, 4, 1, f);
 	fseek(f, 64 * n, SEEK_CUR);
+	// Batches, skipped: v4 adds bounds, v5 the quantization, v8 flip frames, v9 the scroll, v10 the lamp
 	fread(&n, 4, 1, f);
+	const int hdr = 16 + (version >= 4 ? 24 : 0) + (version >= 5 ? 32 + (version >= 8 ? 4 : 0)
+		+ (version >= 9 ? 4 : 0) + (version >= 10 ? 4 : 0) : 0);
 	for (u32 i = 0; i < n; i++)
 	{
-		u8 hdr[72];
-		fread(hdr, 72, 1, f);
+		u8 h[16];
+		fread(h, 16, 1, f);
 		u32 nv, ni;
-		memcpy(&nv, hdr + 8, 4);
-		memcpy(&ni, hdr + 12, 4);
+		memcpy(&nv, h + 8, 4);
+		memcpy(&ni, h + 12, 4);
+		fseek(f, hdr - 16, SEEK_CUR);
 		fseek(f, nv * 16 + ni * 2 + ((ni & 1) ? 2 : 0), SEEK_CUR);
 	}
 	if (!collisionRead(cell.collision, f, version))
