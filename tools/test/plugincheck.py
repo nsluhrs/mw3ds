@@ -64,13 +64,16 @@ def main():
         sys.exit("plugincheck: no plugins to check in " + str(DATA_FILES))
     print("plugins:", "; ".join(plugins))
 
-    # The master alone: the merge gives back exactly what the file holds
+    # The master alone: the merge gives back exactly what the file holds (the add-ons and plugins stay out: with
+    # Tribunal on, a plugin set like Tamriel Rebuilt loads its ESM too, and the merge would hold its records)
+    addons = {k: os.environ.pop(k) for k in ("MW3DS_TRIBUNAL", "MW3DS_BLOODMOON") if k in os.environ}
     mwfiles.PLUGINS, mwfiles._merged = [], None
     raw = [r for r in read_records(DATA_FILES / MASTER) if r.tag != "TES3"]
     alone = mwfiles._merge()
     same = len(raw) == len(alone) and sorted(map(repr, ((r.tag, r.id) for r in raw))) == \
         sorted(map(repr, ((r.tag, r.id) for r in alone)))
     check(same, f"{MASTER} alone: the merge holds its {len(raw)} records")
+    os.environ.update(addons)
 
     mwfiles.PLUGINS, mwfiles._merged = plugins, None
     order = mwfiles.load_order()
