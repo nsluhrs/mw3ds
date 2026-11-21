@@ -49,21 +49,6 @@ and add-ons into `game.json` so the engine and the test harness both know what t
   `TR_m1_S_Ka_Minhir` — `safe_name` folded them together, so ambiguous ids now get a hash-suffixed `.aml`.
 - **Conversion survivability on Linux** (`f71db0a0`): the cell-worker count reads the free memory on Linux
   too — TR's conversion (the biggest set by far) was picking worker counts that OOM-killed runs.
-- **Honest failure** (`dbd4ccc0`): when `zfile` runs out of heap it says so instead of blaming the file —
-  what pointed at the worker-count bug during a TR conversion. On `main` this is still open; in short:
-
-  - **What is wrong**: `zreadAll` (MWZ1-inflated data: cells, game sections) has two allocations — the
-    file's bytes, then the inflated bytes. If the first `malloc` fails the function returns null **with
-    no log at all**; if the second fails the code folds it into `Z_MEM_ERROR` and logs
-    `zfile: <name>: inflate failed`, so in both out-of-memory cases **good data reads as corrupt**.
-    Three valid Tamriel Rebuilt archives tripped exactly this during conversion.
-  - **Why it is wrong**: a null return is the contract for "no such file" to the callers, so an
-    out-of-memory is silently recast as a data problem; and the big allocation (the inflated bytes —
-    and zlib's own internal ones, which never reported either) never raises the memory-low signal the
-    main loop reacts to by handing memory back, as it does when a `new` fails, so the run keeps
-    pressing on a full heap the loop would otherwise have relieved. The fix names the failed
-    allocation with its size in the log and raises that signal on every out-of-heap path of the
-    inflate, turning a false "corrupt file" into the real, recoverable "out of memory".
 
 ## What the plugin set needed from the engine
 
