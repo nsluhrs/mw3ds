@@ -1,0 +1,18 @@
+# data: plugins
+# Tamriel Rebuilt city crawl: the mainland's three biggest towns (cell_entries counts), walking each one's
+# streets for a while. Crash-and-hang smoke for TR's heavy exteriors: Hlerynhul, Akamora, Hlan Oek.
+3 0 0 0 0 MSG
+0.3 0 0 0 0 GOD:2
+0.3 0 0 0 0 GOTO:Hlerynhul
+8 0 0 0
+35 0 1 0.08
+0.2 0 0 0 0 SHOT
+0.3 0 0 0 0 GOTO:Akamora
+8 0 0 0
+35 0 1 -0.08
+0.2 0 0 0 0 SHOT
+0.3 0 0 0 0 GOTO:Hlan_Oek
+8 0 0 0
+35 0 1 0.08
+0.2 0 0 0 0 SHOT
+0.3 0 0 0 0 QUIT
