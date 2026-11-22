@@ -188,6 +188,11 @@ struct Ref
 	int evadeDir = 6;
 	float evadeAt[2] = {};          // where it last got stuck, and how many times running it has there
 	int evadeTries = 0;
+	// The grid hop it keeps walking into (npcMoveTo): the two points' positions, and until when the path
+	// search should offer it no route over that step. Without this the repath a second later finds the very
+	// same blocked route and it lives on the spot (ilfhild leaving Hla Oad, path of 2 points, one unwalkable)
+	float hopBad[6] = {};
+	float hopBadUntil = 0.0f;
 	// A follower held up on its way to the one it follows (npcPackage): it keeps to that one's footsteps until
 	// trailUntil (World::time); trailSeq is the footstep it walks to, trailTimer the time until it looks again
 	float trailUntil = 0.0f, trailTimer = 0.0f, trailBlind = 0.0f;

@@ -79,7 +79,19 @@ int World::nearestPathPoint(const float p[3])
 	return near.empty() ? -1 : near[0].second;
 }
 
-bool World::findPath(const float from[3], const float to[3], std::vector<int>& out)
+// (skipHop: a hop's two points' positions; the walker is held up on it and asked for a route that doesn't
+// cross it -- positions, not point slots, because slots are reused as cells stream in and out)
+static bool hopSkipped(const float* a, const float* b, const float* skip)
+{
+	auto near = [](const float* p, const float* q)
+	{
+		float dx = p[0] - q[0], dy = p[1] - q[1];
+		return dx * dx + dy * dy < 60.0f * 60.0f;
+	};
+	return (near(a, skip) && near(b, skip + 3)) || (near(a, skip + 3) && near(b, skip));
+}
+
+bool World::findPath(const float from[3], const float to[3], std::vector<int>& out, const float* skipHop)
 {
 	out.clear();
 	int start = nearestPathPoint(from), goal = nearestPathPoint(to);
@@ -109,6 +121,8 @@ bool World::findPath(const float from[3], const float to[3], std::vector<int>& o
 		{
 			if (pathPoints[nb].cell < 0 || !cells[pathPoints[nb].cell].live)
 				continue;
+			if (skipHop && hopSkipped(pathPoints[cur].pos, pathPoints[nb].pos, skipHop))
+				continue;             // (the step it keeps walking into: look for a route without it)
 			if (pathPoints[nb].cell != pathPoints[cur].cell)
 			{
 				float a[3] = { pathPoints[cur].pos[0], pathPoints[cur].pos[1], pathPoints[cur].pos[2] + 50.0f };

@@ -477,7 +477,7 @@ struct World
 	// (doors false: shut doors don't count: for walking, where a door is opened on the way, and for the test driver)
 	bool lineOfSight(const float a[3], const float b[3], bool doors = true);
 	int nearestPathPoint(const float p[3]);
-	bool findPath(const float from[3], const float to[3], std::vector<int>& out);   // path point indices
+	bool findPath(const float from[3], const float to[3], std::vector<int>& out, const float* skipHop = nullptr);   // path point indices; skipHop: two xyz points, the grid step to keep out of the search
 	void update(float dt);
 
 	// Script events raised on objects (scripts see them through OnActivate / OnPCAdd / OnPCEquip)

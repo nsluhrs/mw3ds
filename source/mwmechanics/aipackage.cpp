@@ -132,8 +132,14 @@ bool Session::npcMoveTo(int ri, const float target[3], float speed, float dt, bo
 		}
 		if (straight)
 			r.path.clear();
-		else if (!w.findPath(r.pos, target, r.path))
+		else if (!w.findPath(r.pos, target, r.path, w.time < r.hopBadUntil ? r.hopBad : nullptr))
+		{
+			// no way that avoids the blocked hop: take the old way and keep evading on the hop (below), rather
+			// than walk straight into the geometry with no route at all; the escalation sets the hop again if it
+			// still holds, and headway or time lets it go
+			r.hopBadUntil = 0.0f;
 			r.path.clear();
+		}
 		else
 		{
 			// a grid route that ends far from the target (the wilds have no grid: the nearest town's points were
@@ -212,7 +218,22 @@ bool Session::npcMoveTo(int ri, const float target[3], float speed, float dt, bo
 		{
 			// stuck again where it was stuck last: look farther round, and keep to the way longer, each time
 			float sx = r.pos[0] - r.evadeAt[0], sy = r.pos[1] - r.evadeAt[1];
-			r.evadeTries = sx * sx + sy * sy < 150.0f * 150.0f ? std::min(r.evadeTries + 1, 5) : 0;
+			bool sameSpot = sx * sx + sy * sy < 150.0f * 150.0f;
+			r.evadeTries = sameSpot ? std::min(r.evadeTries + 1, 5) : 0;
+			if (!sameSpot)
+				r.hopBadUntil = 0.0f;         // (headway since last time: the blocked step is history)
+			else if (r.evadeTries >= 1 && r.path.size() >= 2)
+			{
+				// stuck on the way again: its next step over the grid is the one held up, and the repath seconds
+				// later would find the very same route and stand it on one spot for good (ilfhild outside Hla
+				// Oad, a route of two points over a hop its body can't take). The search gets the hop's two
+				// positions and looks for a way without them; no other way, it walks straight and evades, and
+				// the hop is fair game again after a while
+				const float* pa = w.pathPoints[r.path[0]].pos, *pb = w.pathPoints[r.path[1]].pos;
+				r.hopBad[0] = pa[0]; r.hopBad[1] = pa[1]; r.hopBad[2] = pa[2];
+				r.hopBad[3] = pb[0]; r.hopBad[4] = pb[1]; r.hopBad[5] = pb[2];
+				r.hopBadUntil = w.time + 45.0f;
+			}
 			r.evadeAt[0] = r.pos[0];
 			r.evadeAt[1] = r.pos[1];
 			r.stuckTimer = -1.0f - 0.5f * r.evadeTries;
