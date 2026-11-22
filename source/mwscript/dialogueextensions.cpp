@@ -63,6 +63,16 @@ std::optional<float> dialogueExtensions(Ctx& c, const Node& n, World& w, bool on
 		if (onPlayer || !r)
 			return (float)w.pcReputation;
 		return (float)(r->reputation + (r->actor >= 0 ? w.game.actors[r->actor].reputation : 0));
+	// SameFaction: the player is in the referenced actor's faction (OpenMW's isInFaction(primaryFaction) -- the
+	// dialogue tests' same-faction check; no actor or a factionless one, as creatures are, says no)
+	case F_SAMEFACTION:
+	{
+		const Ref* speaker = r ? r : (c.self >= 0 ? &w.refs[c.self] : nullptr);
+		if (!speaker || speaker->actor < 0)
+			return 0.0f;
+		std::string f = lower(w.game.actors[speaker->actor].faction.str());
+		return !f.empty() && w.pcRankIn(f) >= 0 ? 1.0f : 0.0f;
+	}
 	case F_CLEARINFOACTOR:
 		// (OpenMW) takes the actor's last answer to the topic out of the journal's Topics index
 		if (r && w.currentInfo >= 0)

@@ -33,6 +33,10 @@ std::optional<float> skyExtensions(Ctx& c, const Node& n, World& w, bool onPlaye
 	// the weather in effect: the new one only once the change to it is done
 	case F_GETCURRENTWEATHER:
 		return (float)w.weatherNow;
+	// GetWindSpeed (OpenMW's Sky extension, which TR uses to spot storm winds): the wind speed felt now, gusting
+	// about what the weather aims for -- 0 calm indoors and in a calm, strong in a blight
+	case F_GETWINDSPEED:
+		return w.windNow;
 	// Bloodmoon's red moon: Secunda in [Moons] Script Color until TurnMoonWhite (OpenMW's setMoonColour). Kept in a
 	// save (OpenMW forgets it on a load, and bloodmoonScript turns it red only once)
 	case F_TURNMOONRED: case F_TURNMOONWHITE:

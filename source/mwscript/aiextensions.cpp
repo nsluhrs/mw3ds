@@ -117,10 +117,16 @@ std::optional<float> aiExtensions(Ctx& c, const Node& n, World& w, bool onPlayer
 			c.host.stopCombat(ref);
 		}
 		return 0.0f;
-	case F_SETHELLO:
-		if (r && r->actor >= 0)
+	// AI Hello: the setting itself, GetHello reading through the reference's change to the record's (OpenMW's
+	// getAiSetting(Hello).getModified(); TR scripts compare it against SetHello values)
+	case F_SETHELLO: case F_GETHELLO:
+	{
+		if (!r || r->actor < 0)
+			return 0.0f;
+		if (n.func == F_SETHELLO)
 			r->hello = (int)argNum(c, n, 0);
-		return 0.0f;
+		return (float)(r->hello >= 0 ? r->hello : w.game.actors[r->actor].hello);
+	}
 	case F_MODFIGHT: case F_SETFIGHT: case F_GETFIGHT:
 	{
 		if (!r || r->actor < 0)

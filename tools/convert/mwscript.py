@@ -592,7 +592,7 @@ class Compiler:
 # Functions the engine accepts but that do nothing yet (keep in step with components/interpreter/interpreter.cpp's no-op cases): rotating baked
 # objects, weather, UI history, voices
 STUBS = {"rotate", "modregion", "dontsaveobject", "changeweather", "clearinfoactor", "raiserank",
-         "getcurrentweather", "equip", "streammusic", "sethello"}
+         "getcurrentweather", "equip", "streammusic", "sethello", "skipanim"}
 
 
 def engine_functions():

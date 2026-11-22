@@ -1,0 +1,28 @@
+# data: plugins
+# The seven TR script functions, proven through the console: wind speed (0 indoors, blowing outside),
+# equipped-armor type (-1 empty, 2 heavy once an iron cuirass goes on), SameFaction, GetPCRunning/Jumping.
+# The console sets TR's own testvar global; the EXPECT steps read it back.
+3 0 0 0 0 MSG
+0.3 0 0 0 0 GOD:2
+0.3 0 0 0 0 GOTO:hlerynhul,_dramis_vendal's_house
+3 0 0 0
+0.3 0 0 0 0 CON:set%testvar%to%(getwindspeed)
+0.1 0 0 0 0 EXPECT:global:testvar:eq:0
+0.3 0 0 0 0 CON:set%testvar%to%(player->getpcrunning)
+0.1 0 0 0 0 EXPECT:global:testvar:eq:0
+0.3 0 0 0 0 CON:set%testvar%to%(player->getpcjumping)
+0.1 0 0 0 0 EXPECT:global:testvar:eq:0
+0.3 0 0 0 0 CON:set%testvar%to%(player->getarmortype%1)
+0.1 0 0 0 0 EXPECT:global:testvar:eq:-1
+0.3 0 0 0 0 CON:set%testvar%to%(player->samefaction)
+0.1 0 0 0 0 EXPECT:global:testvar:eq:0
+0.3 0 0 0 0 CON:player->additem%iron_cuirass%1
+0.3 0 0 0 0 CON:player->equip%iron_cuirass
+0.3 0 0 0 0 CON:set%testvar%to%(player->getarmortype%1)
+0.1 0 0 0 0 EXPECT:global:testvar:eq:2
+0.3 0 0 0 0 COE:12:-10
+3 0 0 0
+0.3 0 0 0 0 CON:set%testvar%to%(player->getpcjumping)
+0.1 0 0 0 0 EXPECT:global:testvar:eq:0
+0.3 0 0 0 0 CON:player->removeitem%iron_cuirass%1
+0.3 0 0 0 0 QUIT

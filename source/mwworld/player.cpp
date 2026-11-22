@@ -445,6 +445,8 @@ void Session::playerMove(const PlayerInput& in, float dt, u64& t)
 			kind = "sneak";
 		else if (tilt > 0.75f && w.player.onGround && !w.player.flying && w.player.levitate <= 0.0f)
 			kind = "run";
+		// the mode GetPCRunning reports: "run" here is OpenMW's Run movement mode, the same reading
+		w.player.running = kind && !strcmp(kind, "run");
 		if (kind)
 		{
 			static const float defBase[4] = { 5.0f, 2.5f, 2.0f, 1.5f }, defMult[4] = { 2.0f, 4.0f, 1.5f, 2.0f };

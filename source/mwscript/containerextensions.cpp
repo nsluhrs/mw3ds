@@ -10,6 +10,7 @@
 #include <unordered_set>
 
 #include "mwworld/worldimp.hpp"
+#include "mwmechanics/combathelpers.hpp"
 #include "components/interpreter/interpreterhelpers.hpp"
 
 std::optional<float> containerExtensions(Ctx& c, const Node& n, World& w, bool onPlayer, int ref, Ref* r)
@@ -125,6 +126,51 @@ std::optional<float> containerExtensions(Ctx& c, const Node& n, World& w, bool o
 			if (it.id == id && it.equipped)
 				return 1.0f;
 		return 0.0f;
+	}
+	// GetArmorType slot: the MGOTG function TR scripts use -- the piece worn in an armor slot (0 helmet, 1 cuirass,
+	// 2-3 pauldrons, 4 greaves, 5 boots, 6-7 gauntlets, 8 shield), its weight class as OpenMW returns it: 0 light,
+	// 1 medium, 2 heavy, or -1 with nothing worn there. The slot is the record's own armor part number, so the class
+	// is armorSkill's reading of its weight for that slot. An NPC wears what it carries (as HasItemEquipped reads
+	// it), and its carried shield -- what it actually holds -- counts for slot 8
+	case F_GETARMORTYPE:
+	{
+		int slot = (int)argNum(c, n, 0);
+		if (slot < 0 || slot > 10)
+			return -1.0f;   // (OpenMW throws "armor index out of range"; -1 just says nothing is worn)
+		auto inSlot = [&](const Object* o) { return o && o->recType == REC_ARMO && o->subtype == slot; };
+		const Object* armor = nullptr;
+		if (onPlayer || !r)
+		{
+			for (auto& it : w.inventory)
+				if (it.equipped && inSlot(w.game.object(it)))
+				{
+					armor = w.game.object(it);
+					break;
+				}
+		}
+		else if (r->actor >= 0)
+		{
+			for (auto& c2 : r->contents)
+				if (inSlot(w.game.object(lower(c2.second))))
+				{
+					armor = w.game.object(lower(c2.second));
+					break;
+				}
+			if (!armor && slot == 8)
+			{
+				const ActorDef& a = w.game.actors[r->actor];
+				if (!a.shield.empty())
+					armor = w.game.object(lower(a.shield));
+			}
+		}
+		if (!armor)
+			return -1.0f;
+		// the weight class, as Session::armorSkill reads it for the skill training
+		int sk = armor->weight <= kArmorSlotBaseWeight[slot] * w.game.gmstf("flightmaxmod", 0.6f) + 0.0005f
+			? SKILL_LIGHT_ARMOR
+			: armor->weight <= kArmorSlotBaseWeight[slot] * w.game.gmstf("fmedmaxmod", 0.9f) + 0.0005f
+			? SKILL_MEDIUM_ARMOR : SKILL_HEAVY_ARMOR;
+		return sk == SKILL_HEAVY_ARMOR ? 2.0f : sk == SKILL_MEDIUM_ARMOR ? 1.0f : 0.0f;
 	}
 	// GetWeaponType: what is in the right hand (OpenMW's OpGetWeaponType): a weapon's type (0 short blade .. 13 bolt),
 	// -2 a lockpick, -3 a probe, -1 nothing (or anything else). A person holds the weapon it fights with while it has

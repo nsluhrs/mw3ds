@@ -29,6 +29,11 @@ std::optional<float> animationExtensions(Ctx& c, const Node& n, World& w, bool o
 {
 	switch (n.func)
 	{
+	// SkipAnim (MGOTG, through OpenMW): fast-forwards the actor's current animation. Ours comes from the actor's
+	// state -- idle, walking, the knockdown timer -- and ends when that ends, so there is nothing to skip; the
+	// TR "skeleton rise" scripts that call it every frame drive on fatigue and distance, not on it, and run fine
+	case F_SKIPANIM:
+		return 0.0f;
 	// Animation groups on actors (OpenMW's CharacterController::playGroup and updateAnimQueue). LoopGroup group count:
 	// that many more times round. PlayGroup plays with no end to its count: a looping group (the idles, walking ...:
 	// Animation::isLoopingAnimation) goes round for ever, any other plays once and holds its last frame, until the next

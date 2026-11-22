@@ -44,6 +44,7 @@ struct Player
 	bool flying = false;
 	bool swimming = false;    // treading water at the surface
 	bool sneaking = false;
+	bool running = false;     // foot travel at full tilt (GetPCRunning: OpenMW's Run movement mode)
 	float knockTimer = 0.0f;  // > 0: knocked down, no control
 	float eyeDrop = 0.0f;     // current lowering of the eye (sneaking, knocked down), eased
 	bool waterWalk = false;   // Water Walking: the surface holds

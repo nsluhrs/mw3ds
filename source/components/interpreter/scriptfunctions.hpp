@@ -75,7 +75,10 @@
 	X(GETSTANDINGACTOR, "getstandingactor") X(GETCOLLIDINGPC, "getcollidingpc") \
 	X(GETCOLLIDINGACTOR, "getcollidingactor") X(HURTCOLLIDINGACTOR, "hurtcollidingactor") X(EXPLODESPELL, "explodespell") \
 	X(GETWATERLEVEL, "getwaterlevel") X(SETWATERLEVEL, "setwaterlevel") X(MODWATERLEVEL, "modwaterlevel") \
-	X(PLACEITEM, "placeitem") X(PLACEITEMCELL, "placeitemcell") 	X(GETPCTRAVELING, "getpctraveling") X(GETPCINJAIL, "getpcinjail") X(GETWEAPONTYPE, "getweapontype") 	X(SETSCALE, "setscale") X(GETSCALE, "getscale") X(MODSCALE, "modscale") X(TURNMOONRED, "turnmoonred") 	X(TURNMOONWHITE, "turnmoonwhite") X(BECOMEWEREWOLF, "becomewerewolf") X(UNDOWEREWOLF, "undowerewolf") 	X(ISWEREWOLF, "iswerewolf") X(SETWEREWOLFACROBATICS, "setwerewolfacrobatics") X(GETWEREWOLFKILLS, "getwerewolfkills") X(GETSPELLREADIED, "getspellreadied")
+	X(PLACEITEM, "placeitem") X(PLACEITEMCELL, "placeitemcell") 	X(GETPCTRAVELING, "getpctraveling") X(GETPCINJAIL, "getpcinjail") X(GETWEAPONTYPE, "getweapontype") 	X(SETSCALE, "setscale") X(GETSCALE, "getscale") X(MODSCALE, "modscale") X(TURNMOONRED, "turnmoonred") 	X(TURNMOONWHITE, "turnmoonwhite") X(BECOMEWEREWOLF, "becomewerewolf") X(UNDOWEREWOLF, "undowerewolf") 	X(ISWEREWOLF, "iswerewolf") X(SETWEREWOLFACROBATICS, "setwerewolfacrobatics") X(GETWEREWOLFKILLS, "getwerewolfkills") X(GETSPELLREADIED, "getspellreadied") \
+	X(GETARMORTYPE, "getarmortype") X(GETHELLO, "gethello") X(GETWINDSPEED, "getwindspeed") \
+	X(SAMEFACTION, "samefaction") X(GETPCJUMPING, "getpcjumping") X(GETPCRUNNING, "getpcrunning") \
+	X(SKIPANIM, "skipanim")
 
 enum ScriptFunction
 {

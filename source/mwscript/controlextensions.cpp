@@ -19,6 +19,13 @@ std::optional<float> controlExtensions(Ctx& c, const Node& n, World& w, bool onP
 	// Force flags are the referenced actor's own (the player's, with no reference): only the player's sneak acts
 	// The player is sneaking (OpenMW's GetPCSneaking: the mechanics' isSneaking, the stance held)
 	case F_GETPCSNEAKING: return w.player.sneaking ? 1.0f : 0.0f;
+	// Running / in the air (OpenMW's GetPCRunning / GetPCJumping: the player's Run and Jump movement modes --
+	// the player's always, whoever spells the reference -- Jump being every moment off the ground on foot, a
+	// jump or a fall alike, not the water, flight or Levitation)
+	case F_GETPCRUNNING: return w.player.running ? 1.0f : 0.0f;
+	case F_GETPCJUMPING:
+		return !w.player.onGround && !w.player.swimming && !w.player.flying && w.player.levitate <= 0.0f
+			? 1.0f : 0.0f;
 	case F_FORCESNEAK: case F_CLEARFORCESNEAK: case F_GETFORCESNEAK:
 	case F_FORCERUN: case F_CLEARFORCERUN: case F_GETFORCERUN:
 	case F_FORCEJUMP: case F_CLEARFORCEJUMP: case F_GETFORCEJUMP:
