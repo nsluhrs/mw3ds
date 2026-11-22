@@ -22,7 +22,7 @@ HERE = Path(__file__).parent
 # malloc capped at the console's heap
 MEM = "--mem" in sys.argv
 BUILD = ROOT / os.environ.get("MW3DS_NATIVE_BUILD", "build/native-mem" if MEM else "build/native")
-TARGET = ["-target", "x86-windows-gnu"] if MEM else []
+TARGET = ["-target", "x86-linux-gnu" if sys.platform.startswith("linux") else "x86-windows-gnu"] if MEM else []
 ZLIB = BUILD / "zlib"
 ZLIB_URL = "https://github.com/madler/zlib/archive/refs/tags/v1.3.1.tar.gz"
 ZLIB_SRC = ["adler32", "compress", "crc32", "deflate", "inffast", "inflate", "inftrees", "trees", "uncompr", "zutil"]

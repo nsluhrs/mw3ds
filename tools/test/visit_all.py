@@ -177,7 +177,8 @@ def judge(log_text, cells_of_batch):
         else:
             g = re.match(r"COE:(-?\d+):(-?\d+)", c["tok"])
             want = f"Exterior cell {g.group(1)}, {g.group(2)}"
-        if re.search(re.escape(want) + r"\b is not in the level", body):
+        wantSpaced = want.replace("_", " ") if c["kind"] == "interior" else want
+        if re.search(r"(?:" + re.escape(want) + r"|" + re.escape(wantSpaced) + r")\b is not in the level", body):
             bad = sorted(set(bad) | {"not-in-level"})
         elif not arrived.search(body):
             bad = sorted(set(bad) | {"no-arrival"})
