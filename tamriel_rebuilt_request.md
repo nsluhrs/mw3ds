@@ -97,7 +97,8 @@ ships as a **program-only CIA (~2 MB) plus the data on the card** — the engine
   960 KB) fills the emulator's linear pool, is refused, retried and recovered under the memory-low
   handshake — graceful, but the first hard number for "towns are bigger than the pool".
 - `tr-outside`: Hla Oad's cell loads and renders; its one open warning (NPC `ilfhild` stuck travelling)
-  led to the engine fix that gives a walker stuck on one grid hop a route without it.
+  led to the engine fix that gives a walker stuck on one grid hop a route without it — re-run on the
+  emulator with that build, `tr-smoke`, `tr-outside` and the town walk are warning-free, `ilfhild` walks.
 - `d0239006`: the PC verdict stopped charging cases for the console-only `exit: shut down` line, which the
   TR smoke tests (ending in `QUIT`) could otherwise never show.
 
@@ -105,6 +106,12 @@ ships as a **program-only CIA (~2 MB) plus the data on the card** — the engine
 
 1. Emulator spot pass over `ext 6-8, m49..m52` and the towns, where the linear pool actually refuses
    cells: decide the partial-commit question (keep the batches that fit, stream the rest later).
+   Measured (`tr-southwaters`, the seven tightest grids from the sweep, Azahar --fast): every hop landed,
+   the run shut down clean; two actor-pass `out of linear memory` refusals left `ext_7_m50` and `ext_6_m51`
+   unloaded for the whole visit (the retry reloads the cell only on the next arrival); the memory-low
+   handshake brought free linear back from 0 to 22-26 MB between hops; and under the same pressure 21
+   texture *reads* failed — files present, allocation refused; the cache's retry (up to 3, or once 2 MB
+   frees) is the recovery path. Watchdog frames: 4-21 s main-thread stalls "at texture read".
 2. Offline repair pass for actor placement (floor-snap sunk/floating actors, pathgrid links a body
    can't fit through) — worth doing for vanilla data at the same rates, not TR alone.
 3. Console-side proof: the ARM CIA from this data, the staged 5.3 GB card install, and the two TR cases

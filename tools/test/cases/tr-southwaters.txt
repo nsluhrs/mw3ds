@@ -1,0 +1,22 @@
+# data: plugins
+# The emulator's hard corner: the seven tightest grids from the all-cells sweep's linear-measurements -- five at
+# 0 KB free (ext 6-8, m49..m52) plus ext 7,-19 and ext 2,-50 -- where the emulator's smaller pool will strain. Hops land mid-ocean, so each
+# arrival streams the whole neighbourhood; what to read in the log afterwards: "out of linear memory" refusals,
+# the memory-low handshake freeing far cells, refused neighbours retried, and no crash.
+3 0 0 0 0 MSG
+0.3 0 0 0 0 GOD:2
+0.3 0 0 0 0 COE:6:-49
+5 0 0 0
+0.3 0 0 0 0 COE:6:-50
+5 0 0 0
+0.3 0 0 0 0 COE:6:-52
+5 0 0 0
+0.3 0 0 0 0 COE:7:-52
+5 0 0 0
+0.3 0 0 0 0 COE:8:-51
+5 0 0 0
+0.3 0 0 0 0 COE:7:-19
+5 0 0 0
+0.3 0 0 0 0 COE:2:-50
+5 0 0 0
+0.3 0 0 0 0 QUIT
