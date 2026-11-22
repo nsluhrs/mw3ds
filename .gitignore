@@ -38,3 +38,4 @@ tools/test/cases/scratch/
 # downloads they came out of; too big for git and not on a git remote the way the other mods are
 mods/tamriel-rebuilt/
 downloads/
+tools/test/cases/visitall/

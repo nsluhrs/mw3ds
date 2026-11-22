@@ -43,12 +43,12 @@ BAD = [
     (re.compile(r"world: failed to load (\S+)"), "load-failed"),
     (re.compile(r"inflate failed|out of memory inflating|out of memory reading"), "inflate-oom"),
     (re.compile(r"cell: .*: no such file"), "cel-missing"),
-    (re.compile(r"test: .* is not in the level"), "not-in-level"),
 ]
 WARN = [
     (re.compile(r"monitor: (.*)"), None),
     (re.compile(r"watchdog: (.*)"), None),
     (re.compile(r"out of linear memory"), "linear-oom"),
+    (re.compile(r"is not in the level"), "script-cell-missing"),
 ]
 ARRIVE = re.compile(r"test: (going into|going to|going straight into|outside in) (.*)")
 MISSING = re.compile(r"\((\d+) missing\)")
@@ -142,30 +142,50 @@ def make_cases(cells, batch, out_dir):
 
 
 def judge(log_text, cells_of_batch):
-    """Attribute log lines to the step that caused them; one verdict dict per cell.
-    Cell i of the batch arrives at step 2+2i (MSG and GOD are steps 0 and 1; each cell is a hop step
-    and a wait step), and the step lines the engine writes -- 'autoinput: step N ... feet ...' -- are
-    the markers. 'step N took' lines are not markers and must not toggle the window."""
-    lines = log_text.splitlines()
+    """Attribute every log line to the step that wrote it, then one verdict per cell.
+
+    The step's own 'test:' action line is logged on its first frame, just BEFORE its marker line; its
+    load lines come after the marker, up to the next one; a wait step's streaming and monitor lines
+    come after its marker. So: flush the gap before each marker with 'test:' lines owned by that
+    marker's step and everything else owned by the step before it. Cell i hops at step 2+2i (MSG and
+    GOD take 0 and 1) and waits at 3+2i, so its signals are the lines owned by those two steps.
+    A 'test: <name> is not in the level' only FAILs when it names this cell's target; scripts say
+    the same phrase about cells they looked for ('test: t test pc is not in the level')."""
     marker = re.compile(r"autoinput: step (\d+) .*feet")
+    by, pending, last = {}, [], None
+    for ln in log_text.splitlines():
+        m = marker.search(ln)
+        if not m:
+            pending.append(ln)
+            continue
+        n = int(m.group(1))
+        for p in pending:
+            owner = n if "test: " in p else max(n - 1, 0)
+            by.setdefault(owner, []).append(p)
+        pending, last = [], n
+    if last is not None:
+        by.setdefault(last, []).extend(pending)
+
+    arrived = re.compile(r"world: entered |world: outside in |travel: .* in \d+ ms|cellmem: .* entered")
     out = []
     for i, c in enumerate(cells_of_batch):
-        lo = 2 + 2 * i
-        text, keep = [], False
-        for ln in lines:
-            m = marker.search(ln)
-            if m:
-                keep = int(m.group(1)) >= lo and int(m.group(1)) < lo + 2
-                continue
-            if keep:
-                text.append(ln)
-        body = "\n".join(text)
+        j = 2 + 2 * i
+        body = "\n".join(by.get(j, []) + by.get(j + 1, []))
         bad = sorted({label for rx, label in BAD if rx.search(body)})
+        if c["kind"] == "interior":
+            want = c["name"].lower()
+        else:
+            g = re.match(r"COE:(-?\d+):(-?\d+)", c["tok"])
+            want = f"Exterior cell {g.group(1)}, {g.group(2)}"
+        if re.search(re.escape(want) + r"\b is not in the level", body):
+            bad = sorted(set(bad) | {"not-in-level"})
+        elif not arrived.search(body):
+            bad = sorted(set(bad) | {"no-arrival"})
         warn = []
         for rx, label in WARN:
-            m = rx.search(body)
-            if m:
-                warn.append(m.group(1) if label is None else label)
+            m2 = rx.search(body)
+            if m2:
+                warn.append(m2.group(1) if label is None and m2.groups() else label)
         warn = sorted(set(warn))
         miss = max((int(g) for g in MISSING.findall(body)), default=0)
         free = min((int(g) for g in FREE.findall(body)), default=None)
