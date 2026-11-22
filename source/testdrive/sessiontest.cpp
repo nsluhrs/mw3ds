@@ -257,9 +257,12 @@ void Session::testGoto(const std::string& cellName)
 		}
 		auto e = entries.find(want);
 		if (e == entries.end())
-			for (auto kv = entries.begin(); e == entries.end(); ++kv)
+			for (auto kv = entries.begin(); kv != entries.end(); ++kv)
 				if (nameSame(lower(kv->first), want))
+				{
 					e = kv;
+					break;
+				}
 		if (e != entries.end())
 		{
 			memcpy(travelPos, e->second.data(), sizeof(travelPos));
