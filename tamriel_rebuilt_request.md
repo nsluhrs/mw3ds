@@ -74,16 +74,33 @@ ships as a **program-only CIA (~2 MB) plus the data on the card** — the engine
 
 ## Proof so far (native PC test build, data `out/tr`)
 
-- `tr-smoke`: **PASS** — Okur's House (a TR-only interior) loads with 0 missing textures, Okur speaks his
-  TR dialogue line, its topics learn, the run saves clean.
-- `tr-outside`: Hla Oad's cell loads and renders (screenshot verified, 0 missing textures), with one real
-  warning still open: NPC `ilfhild` stuck travelling toward `velfred` on a 2-point path (TR pathgrid or
-  walkability around Hla Oad).
+- **All-cells sweep** (`tools/test/visit_all.py`, 12,528 cells — every grid square and every reachable
+  interior, biggest cells first): **0 FAIL** — nothing crashes, nothing fails to load, no cell is
+  unreachable; 92% fully clean. The 7.9% warnings are dominated by the teleport-arrival settling
+  artifact (4.4%, identical on vanilla data) and actor placement nags (below/above floor — vanilla
+  carries the same rate below floor, so it's an engine-wide floor-probe strictness, not TR sloppiness).
+  TR-specific only: 88 items "can't be aimed at" (collision boxes), 39 scripts calling
+  `getwindspeed`/`getarmortype` (unsupported), and the emulator-side linear refusals around the biggest
+  grid cells. Tightest linear spots: the far-south water grids `ext 6-8, m49..m52` — first targets for
+  an emulator spot pass.
+- `tr-smoke`: **PASS** in the emulator — Okur's House (a TR-only interior) loads with 0 missing textures,
+  Okur speaks his TR dialogue line, its topics learn, the run saves clean, and the log closes with the
+  console-only `exit: shut down`.
+- `tr-cities`: Hlerynhul, Akamora and Hlan Oek walked (the mainland's three biggest settlements by cell
+  count), PC and Azahar, no crashes; one real measurement: neighbour grid cell `ext_0_m45` (68 batches,
+  960 KB) fills the emulator's linear pool, is refused, retried and recovered under the memory-low
+  handshake — graceful, but the first hard number for "towns are bigger than the pool".
+- `tr-outside`: Hla Oad's cell loads and renders; its one open warning (NPC `ilfhild` stuck travelling)
+  led to the engine fix that gives a walker stuck on one grid hop a route without it.
 - `d0239006`: the PC verdict stopped charging cases for the console-only `exit: shut down` line, which the
   TR smoke tests (ending in `QUIT`) could otherwise never show.
 
 ## Open items
 
-1. `ilfhild`'s stuck travel at Hla Oad — reproduce and fix the path around the town.
-2. Console-side proof: the ARM CIA from this data, the staged 5.3 GB card install, and the two TR cases
-   under the emulator/hardware.
+1. Emulator spot pass over `ext 6-8, m49..m52` and the towns, where the linear pool actually refuses
+   cells: decide the partial-commit question (keep the batches that fit, stream the rest later).
+2. Offline repair pass for actor placement (floor-snap sunk/floating actors, pathgrid links a body
+   can't fit through) — worth doing for vanilla data at the same rates, not TR alone.
+3. Console-side proof: the ARM CIA from this data, the staged 5.3 GB card install, and the two TR cases
+   on hardware.
+4. Engine coverage for the two script functions TR calls (`getwindspeed`, `getarmortype`).
