@@ -168,6 +168,26 @@ bool Session::centerOnExterior(int x, int y)
 	return true;
 }
 
+// Names for matching, underscores and spaces the same: the step's name escaping (GOTO: turns _ into a
+// space) can't tell them apart for names that really have both, and TR's staging cells do exactly that
+// ("TR_Hold_Mansurabi, Lake"). Exact-first everywhere; the loose pass only when exact found nothing.
+static bool nameSame(const std::string& a, const std::string& b)
+{
+	if (a.size() != b.size())
+		return false;
+	for (size_t i = 0; i < a.size(); i++)
+	{
+		char x = a[i], y = b[i];
+		if (x == '_')
+			x = ' ';
+		if (y == '_')
+			y = ' ';
+		if (x != y)
+			return false;
+	}
+	return true;
+}
+
 // Enters a cell through a door that leads there (any loaded door; else the first one found)
 void Session::testGoto(const std::string& cellName)
 {
@@ -176,13 +196,17 @@ void Session::testGoto(const std::string& cellName)
 	for (size_t i = 0; i < w.refs.size(); i++)
 	{
 		const Ref& r = w.refs[i];
-		if (r.hasDest && lower(r.destCell) == want && (door < 0 || w.active(i)))
+		if (r.hasDest && nameSame(lower(r.destCell), want) && (door < 0 || w.active(i)))
 			door = i;
 	}
 	if (door < 0)
 	{
 		// No door read yet (cells' objects load on demand): straight in; a TP step places the player
 		int dest = w.cellIndex(cellName);
+		if (dest < 0)
+			for (size_t i = 0; dest < 0 && i < w.cells.size(); i++)
+				if (nameSame(lower(w.cells[i].name), want) || nameSame(w.cells[i].file, want))
+					dest = (int)i;
 		if (dest < 0)
 		{
 			logf("test: %s is not in the level", cellName.c_str());
@@ -232,6 +256,10 @@ void Session::testGoto(const std::string& cellName)
 			}
 		}
 		auto e = entries.find(want);
+		if (e == entries.end())
+			for (auto kv = entries.begin(); e == entries.end(); ++kv)
+				if (nameSame(lower(kv->first), want))
+					e = kv;
 		if (e != entries.end())
 		{
 			memcpy(travelPos, e->second.data(), sizeof(travelPos));
