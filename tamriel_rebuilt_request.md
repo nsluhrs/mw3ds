@@ -83,6 +83,12 @@ ships as a **program-only CIA (~2 MB) plus the data on the card** — the engine
   `getwindspeed`/`getarmortype` (unsupported), and the emulator-side linear refusals around the biggest
   grid cells. Tightest linear spots: the far-south water grids `ext 6-8, m49..m52` — first targets for
   an emulator spot pass.
+- The seven script functions the sweep's warnings named (`getwindspeed`, `getarmortype`, `skipanim`,
+  `getpcjumping`, `getpcrunning`, `samefaction`, `gethello`) now run, with OpenMW's readings (`c9d0757c`):
+  the re-run of those cells logs zero unsupported-function warnings, and `probe-fns` asserts the values —
+  wind 0 indoors / blowing outside, armor slot −1 bare and 2 heavy in an iron cuirass, faction and
+  movement modes. The vanilla suite re-ran clean: 830/1191 against the 828/1189 record, no case lost
+  (the two new passes are `probe-fns` and `tr-cities`).
 - `tr-smoke`: **PASS** in the emulator — Okur's House (a TR-only interior) loads with 0 missing textures,
   Okur speaks his TR dialogue line, its topics learn, the run saves clean, and the log closes with the
   console-only `exit: shut down`.
@@ -103,4 +109,3 @@ ships as a **program-only CIA (~2 MB) plus the data on the card** — the engine
    can't fit through) — worth doing for vanilla data at the same rates, not TR alone.
 3. Console-side proof: the ARM CIA from this data, the staged 5.3 GB card install, and the two TR cases
    on hardware.
-4. Engine coverage for the two script functions TR calls (`getwindspeed`, `getarmortype`).
