@@ -161,6 +161,9 @@ static bool readBatches(FILE* f, std::vector<CellBatch>& out, Cell& cell, u32 ve
 		if (!b.verts || !b.indices)
 		{
 			logf("cell: out of linear memory at batch %lu (%lu KB free)", i, linearSpaceFree() / 1024);
+			// (this thread can't give memory back itself: C3D's frame dance needs the main thread. Say the pool
+			// is spent and the loop frees some -- far cells' geometry, a neighbour let go -- before the retry)
+			g_memoryLow = true;
 			lockedLinearFree(b.verts);
 			lockedLinearFree(b.indices);
 			return false;
