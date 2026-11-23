@@ -1,0 +1,6 @@
+# data: plugins
+# needs: build/player-saves/test_s040.sav
+# Save from the real 3DS (save_040) loaded on the TR build
+0.5 0 0 0 0 LOAD:s040
+5 0 0 0
+0.1 0 0 0 0 EXPECT:level:eq:4
