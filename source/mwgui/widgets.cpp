@@ -1309,10 +1309,31 @@ int uiItemGrid(UiGrid& grid, float x, float y, float w, float h, const std::vect
 	if (keys && n > 0)
 	{
 		int sel = grid.selected;
-		if (s_in.down & KEY_RIGHT) sel = sel + 1 < n ? sel + 1 : sel;
-		if (s_in.down & KEY_LEFT) sel = sel > 0 ? sel - 1 : sel;
-		if (s_in.down & KEY_DOWN) sel = sel + cols < n ? sel + cols : sel;
-		if (s_in.down & KEY_UP) sel = sel - cols >= 0 ? sel - cols : sel;
+		u32 rep = uiRepeated();
+		// Left / right at the two ends of the grid: a new press goes round (right past the last item to the
+		// first, left off the first to the last), a held key's repeat stops there; in between, right walks
+		// the row's end into the next row
+		if (s_in.down & KEY_RIGHT) sel = sel + 1 < n ? sel + 1 : (rep & KEY_RIGHT ? sel : 0);
+		if (s_in.down & KEY_LEFT) sel = sel > 0 ? sel - 1 : (rep & KEY_LEFT ? sel : n - 1);
+		// Up / down past either end: a new press goes round (down from the last row to the first, up from
+		// the first to the last, keeping the column where the last row has one), a held key's repeat stops
+		// there, as a list's does (listKeys)
+		if ((s_in.down & KEY_DOWN) && rows > 1)
+		{
+			int to = sel + cols;
+			sel = to < n ? to : (rep & KEY_DOWN ? sel : sel % cols);
+		}
+		if ((s_in.down & KEY_UP) && rows > 1)
+		{
+			int to = sel - cols;
+			if (to < 0 && !(rep & KEY_UP))
+			{
+				to = (rows - 1) * cols + sel % cols;
+				if (to >= n)
+					to = n - 1;         // the last row is short and holds none of this column
+			}
+			sel = to < 0 ? sel : to;
+		}
 		if (sel != grid.selected)
 		{
 			grid.selected = sel;

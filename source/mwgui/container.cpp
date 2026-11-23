@@ -294,7 +294,7 @@ void Session::drawContainer()
 	if (putting && pick >= 0 && pick < (int)mine.size())
 	{
 		if (containerPut(mine[pick]))
-			grid.selected = -1;
+			;                       // (the cursor keeps its cell, as a take and as a drop do)
 	}
 	else if (!putting && pick >= 0 && pick < (int)theirs.size())
 		take(theirs[pick]);

@@ -80,6 +80,19 @@
 # ... and held up, back to the top row
 3 0 0 0 0 UP
 0.3 0 0 0 0 EXPECT:gridsel:lt:8
+# A fresh press past either end goes round: up from the first row to the last, down back to the first
+0.25 0 0 0 0 UP
+0.2 0 0 0 0 EXPECT:gridsel:ge:48
+0.25 0 0 0 0 DOWN
+0.2 0 0 0 0 EXPECT:gridsel:lt:8
+# The row's ends the same way: held right walks every row and stops at the last item, and from there a
+# fresh press right goes to the first, a fresh press left back to the last
+5 0 0 0 0 RIGHT
+0.3 0 0 0 0 EXPECT:gridsel:ge:48
+0.25 0 0 0 0 RIGHT
+0.2 0 0 0 0 EXPECT:gridsel:eq:0
+0.25 0 0 0 0 LEFT
+0.2 0 0 0 0 EXPECT:gridsel:ge:48
 # ZL + a direction held sets that quick key once (one notice), and the selection stays where it is
 0.1 0 0 0 0 SNAP:gridsel+EXPECT:quickkeysset:eq:0+EXPECT:notices:eq:0
 1.5 0 0 0 0 ZL+DOWN

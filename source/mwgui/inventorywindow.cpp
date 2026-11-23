@@ -125,7 +125,8 @@ void Session::drawInventory()
 		{
 			dropFromInventory(sel, dropCount);
 			dropCounting = false;
-			grid.selected = -1;
+			// (the cursor keeps its cell: what stood next to the dropped stack slides under it, and a grid
+			// that just lost its last row clamps back, as uiItemGrid does every frame)
 		}
 		return;
 	}
@@ -168,10 +169,7 @@ void Session::drawInventory()
 				playSound(-1, "Menu Click");
 			}
 			else
-			{
-				dropFromInventory(sel, 1);
-				grid.selected = -1;
-			}
+				dropFromInventory(sel, 1);        // (the cursor stays in its cell, as with a counted drop)
 		}
 		else if (labels[b] == "Drink" || labels[b] == "Eat")
 			consume(w.inventory[sel].id);
