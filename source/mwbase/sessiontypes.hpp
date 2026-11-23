@@ -72,6 +72,12 @@ static const int kLookDefaultPct = 200;
 // Subtitles (Options > Display; settings.txt subtitles=on|off): spoken lines written on the top screen. Off, a line
 // with a voice is only heard; one with no voice file is still written (it would be lost otherwise)
 extern bool g_subtitles;
+// The HUD's minimap outdoors (settings.txt minimaplocal=on|off): off, the world map's picture round the player (its
+// tiles, the place's names); on, the local map's own picture, drawn from the loaded cells (buildings' footprints and
+// doors at a cell's scale, like the map screen's Local). Tap the minimap to flip it (everywhere but the stylus
+// layout's look area: hiding its glass buttons frees the tap); the map screen's own World / Local button is
+// separate (mapLocal)
+extern bool g_minimapLocal;
 // Depth buffer (Options > Display; settings.txt depth=24|16in3d|16): the top screen's depth buffer, 24 bits, 16 bits
 // while 3D is on (half the depth traffic for two eyes), or 16 always. 16 bits may show far surfaces fighting
 // (Engine::useTopDepth)

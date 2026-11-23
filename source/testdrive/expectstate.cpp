@@ -347,6 +347,7 @@ std::optional<bool> numberOfState(Session& s, const std::string& what, const std
 	else if (what == "messagetop") v = s.messageTop;      // its first text line shown
 	else if (what == "messageleft") v = s.messageLeft;    // its text lines below what is shown
 	else if (what == "maplocal") v = s.mapLocal;          // the map screen shows the local map
+	else if (what == "minimaplocal") v = g_minimapLocal;  // the HUD's minimap shows the local map outdoors
 	else if (what == "mapzoom") v = s.mapZoomIdx;         // its zoom step
 	else if (what == "mapcx") v = s.mapCX;                // the map view's centre (world map: map pixels, local: picture pixels)
 	else if (what == "mapcy") v = s.mapCY;

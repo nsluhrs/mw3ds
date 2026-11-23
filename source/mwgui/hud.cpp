@@ -671,13 +671,21 @@ void Session::drawHud(int parts)
 		}
 	}
 
-	// Minimap: tap it for the map (not in the stylus layout: the stylus looks there, and taps its round buttons)
+	// Minimap: tap it to flip the outdoor view between the world map's picture and the local map's (the map screen's
+	// World / Local button is its own choice; saved as minimaplocal). Not in the stylus layout while its glass
+	// buttons show: the stylus looks there; hiding the buttons frees the tap
 	if (part(HUD_MAP))
 	{
 		bool mapOk = !w.game.map.file.empty() && ((w.menusEnabled & MENU_MAP) || !w.game.chargen);
-		drawMapView(186, 26, 128, 128, 1.0f, false, w.current >= 0 && w.cells[w.current].interior);
-		if (mapOk && !stylus && uiHit(186, 26, 128, 128))
-			openScreen(SCR_MAP);
+		drawMapView(186, 26, 128, 128, 1.0f, false,
+			w.current >= 0 && (w.cells[w.current].interior || g_minimapLocal));
+		if (mapOk && (!stylus || !g_stylusButtons) && uiHit(186, 26, 128, 128))
+		{
+			g_minimapLocal = !g_minimapLocal;
+			saveSettings();
+			playSound(-1, "Menu Click");
+			logf("minimap: %s", g_minimapLocal ? "local" : "world");
+		}
 	}
 	if (part(HUD_REST))
 	{

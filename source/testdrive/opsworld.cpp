@@ -292,15 +292,17 @@ std::optional<bool> opsWorld(Session& s, const std::vector<std::string>& a)
 	// GAMMA:<percent> / AUTOGAMMA:on|off: the Display settings, saved as the screen saves them. LUX:<lux>: a light reading
 	// as if from QTM (the New 3DS's), polled as it is; CAMLUMA:<0..255>: as if from the camera at the next loading screen
 	// (CAMLUMA:-1: the real inner camera there, as an Old 3DS reads it)
-	// LOOKSPEED / GETURN / GEAIM:<percent>, INVERTY:on|off (Controls > Look), SUBTITLES:on|off (Display): saved as the
-	// screens save them
-	if ((verb == "LOOKSPEED" || verb == "GETURN" || verb == "GEAIM" || verb == "INVERTY" || verb == "SUBTITLES") && a.size() >= 2)
+	// LOOKSPEED / GETURN / GEAIM:<percent>, INVERTY:on|off (Controls > Look), SUBTITLES:on|off (Display), MINIMAP:
+	// world|local (the HUD's minimap outdoors): saved as the screens save them
+	if ((verb == "LOOKSPEED" || verb == "GETURN" || verb == "GEAIM" || verb == "INVERTY" || verb == "SUBTITLES"
+		|| verb == "MINIMAP") && a.size() >= 2)
 	{
 		int pct = std::max(kLookMinPct, std::min(kLookMaxPct, atoi(a[1].c_str())));
 		if (verb == "LOOKSPEED") g_lookSpeed = pct;
 		else if (verb == "GETURN") g_geTurnSpeed = std::max(kGeTurnMinPct, std::min(kGeTurnMaxPct, atoi(a[1].c_str())));
 		else if (verb == "GEAIM") g_lookSpeed = pct;      // (the GoldenEye aim looks at the look speed)
 		else if (verb == "INVERTY") g_invertY = a[1] == "on";
+		else if (verb == "MINIMAP") g_minimapLocal = a[1] != "world" && a[1] != "off";
 		else g_subtitles = a[1] != "off";
 		s.saveSettings();
 		logf("test: %s %s", verb.c_str(), a[1].c_str());

@@ -1,0 +1,23 @@
+# start: Seyda Neen
+# feat-minimap-local: tapping the HUD's minimap flips its outdoor view. Off, it shows the world map's picture round
+# the player (its land tiles and place names); on, the local map's picture drawn from the loaded cells (the buildings'
+# footprints and doors, like the map screen's Local). The picture streams while the minimap shows it, without the map
+# screen ever opening: the taps fall on the minimap (its middle, away from its edge that opens the map). The world
+# picture before, the local one after, the world one again: a third tap flips it back. Natively a local picture is
+# drawn on the frames a SHOT lets it run, so the wait before the shot gives it frames to fill in
+0.5 0 0 0 0 MSG
+0.3 0 0 0 0 GOD
+0.3 0 0 0 0 GOTO:Seyda_Neen
+4 0 0 0 0
+0.3 0 0 0 0 MINIMAP:world
+0.3 0 0 0 0 EXPECT:minimaplocal:eq:0
+0.3 0 0 0 0 SHOT
+0.3 0 0 0 0 TAP:250:90
+0.5 0 0 0 0 EXPECT:minimaplocal:eq:1+EXPECT:screen:none
+2 0 0 0 0
+0.3 0 0 0 0 SHOT
+0.3 0 0 0 0 EXPECT:minimaplocal:eq:1
+0.3 0 0 0 0 TAP:250:90
+0.5 0 0 0 0 EXPECT:minimaplocal:eq:0
+0.3 0 0 0 0 SHOT
+0.3 0 0 0 0 SCREEN:none

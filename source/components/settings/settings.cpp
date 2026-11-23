@@ -22,6 +22,7 @@ bool g_stylusButtons = true;
 int g_stickZonePct = kStickZoneDefaultPct;
 bool g_invertY = false;
 bool g_subtitles = true;
+bool g_minimapLocal = false;   // outdoors the minimap shows the world map's tiles until tapped (see Session's HUD)
 int g_depthMode = DEPTH_16_IN_3D;
 static int s_gyroSens = 100;      // gyro aim's sensitivity, kept while it is off
 
@@ -83,6 +84,7 @@ void Session::loadSettings()
 		// (an older file's geaim= is left unread: the GoldenEye aim looks at the look speed)
 		else if (strncmp(line, "inverty=", 8) == 0) g_invertY = strncmp(line + 8, "on", 2) == 0;
 		else if (strncmp(line, "subtitles=", 10) == 0) g_subtitles = strncmp(line + 10, "off", 3) != 0;
+		else if (strncmp(line, "minimaplocal=", 13) == 0) g_minimapLocal = strncmp(line + 13, "off", 3) != 0;
 		else if (strncmp(line, "depth=", 6) == 0 && !autotest)
 			g_depthMode = strncmp(line + 6, "24", 2) == 0 ? DEPTH_24 : strncmp(line + 6, "16in3d", 6) == 0 ? DEPTH_16_IN_3D : DEPTH_16;
 		else if (strncmp(line, "view=", 5) == 0)
@@ -123,6 +125,7 @@ void Session::saveSettings()
 	fprintf(f, "stylusspeed=%d\nstylusbuttons=%s\n", g_stylusSpeed, g_stylusButtons ? "on" : "off");
 	fprintf(f, "stickzone=%d\n", g_stickZonePct);
 	fprintf(f, "subtitles=%s\n", g_subtitles ? "on" : "off");
+	fprintf(f, "minimaplocal=%s\n", g_minimapLocal ? "on" : "off");
 	fprintf(f, "depth=%s\n", g_depthMode == DEPTH_24 ? "24" : g_depthMode == DEPTH_16_IN_3D ? "16in3d" : "16");
 	fprintf(f, "view=%s\n", viewMode == VIEW_MIN ? "min" : viewMode == VIEW_MAX ? "max" : viewMode == VIEW_MID ? "mid" : "auto");
 	fprintf(f, "dynview=%s\n", viewMode == VIEW_AUTO ? "on" : "off");     // (for an older build reading the file)

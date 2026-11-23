@@ -178,6 +178,10 @@ that walks and turns, on the Skyrim layout's buttons, and a button that stops yo
 | START | Menu: save, rest, options |
 | Touch screen | Inventory, magic, map, stats, quick keys |
 
+The minimap outdoors shows the world map's picture round you; tap it for the local map drawn from the loaded cells
+(buildings' footprints, doors), tap again to go back. It is kept between sessions (the Map button in its own row still
+opens the map screen; the stylus layout looks there, but hiding its glass buttons frees the tap).
+
 **Gyro aim** (Options > Controls): turning the 3DS turns your view, for fine aiming; off, 0.5x, 1x or 2x, kept between
 sessions. Choosing a speed calibrates it: lay the 3DS down for 2 seconds (it also tries once as the game starts). The
 same tab sets one look speed for the sticks, the D-pad and GoldenEye aiming, the GoldenEye turn while walking, and the

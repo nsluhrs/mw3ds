@@ -111,15 +111,17 @@ void Session::updateLocalMap()
 	}
 	if (!w.cells[w.current].interior)
 	{
-		// Outdoors, only while the map screen shows it (a render costs a frame): a cell and a half from above
-		// everything loaded, round the player as the screen opens, then round where the view has panned to, again
-		// once that is a sixth of a cell from the picture's middle (so panning goes on past the picture's edge, as far
-		// as the loaded cells reach: the picture is kept inside them, nothing past them is drawn). The view stays on
-		// the same spot of the world across a new picture
-		if (screen != SCR_MAP || !mapLocal)
+		// Outdoors, while the map screen shows it or the HUD's minimap is on its local view (a render costs a frame):
+		// a cell and a half from above everything loaded, round the player as the screen opens, then round where the
+		// view has panned to, again once that is a sixth of a cell from the picture's middle (so panning goes on past
+		// the picture's edge, as far as the loaded cells reach: the picture is kept inside them, nothing past them is
+		// drawn). The view stays on the same spot of the world across a new picture
+		bool onMapScreen = screen == SCR_MAP && mapLocal;
+		if (!onMapScreen && !(g_minimapLocal && (w.menusEnabled & MENU_MAP)))
 			return;
 		const float size = 12288.0f;
-		bool panned = mapViewSet && localMapCell == -2;
+		// (the pan follows the map screen's view; the HUD's minimap stays round the player, whatever the screen did last)
+		bool panned = onMapScreen && mapViewSet && localMapCell == -2;
 		float view[2] = { w.player.feet[0], w.player.feet[1] };
 		if (panned)
 		{
