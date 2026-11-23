@@ -41,8 +41,9 @@ def main():
     if a.build and mwtools.make([]).returncode != 0:
         raise SystemExit("make failed: see its output above (devkitPro, or the container recipe in the README)")
 
-    # The program alone in the CIA (no_data): the set would push the RomFS past the 4 GB ceiling
-    if pack(str(data), cia, no_data=True) != 0:
+    # The program alone in the CIA (no_data): the set would push the RomFS past the 4 GB ceiling. The CIA carries
+    # the set's name (set.txt) and, for a registered set, its own HOME menu title, id and art (make_cia.SETS).
+    if pack(str(data), cia, no_data=True, set=name) != 0:
         raise SystemExit("CIA build failed: see the makerom output just above this error")
 
     if not a.no_stage:

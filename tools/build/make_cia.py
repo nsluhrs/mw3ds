@@ -36,6 +36,16 @@ DEFS = {
     "APP_CPU_SPEED": "804MHz", "APP_ENABLE_L2_CACHE": "true", "APP_VERSION_MAJOR": "0",
 }
 
+# Multi-set builds (build_tr_sdmc.py): each set ships as its own title on the HOME menu. The add-on set keeps the
+# main title's id (its CIA is an in-place upgrade of the plain build), Tamriel Rebuilt gets its own: a second tile.
+# The engine picks the card's data-<set> folder for the set named in the CIA's romfs set.txt (source/engine.cpp).
+# Each set's own art (tools/build/art/sets/<set>/, make_set_art.py) goes in its SMDH icon; the banner stays the
+# main title's 3D one (make_art.py's banner.bnr), so every tile opens with the same stereo scene.
+SETS = {
+    "exp": ("MW3DS", "CTR-P-MW3D", "0xF8287"),
+    "tr": ("MW3DS TR", "CTR-P-MW3T", "0xF8288"),
+}
+
 
 BANNER = ROOT / "tools" / "build" / "banner.bnr"         # the 3D model (make_art.py) and its own tune
 BANNER_WAV = ROOT / "tools" / "build" / "banner.wav"
@@ -139,7 +149,7 @@ def names(old3ds=False, tribunal=False, bloodmoon=False):
     return data, cia + ".cia"
 
 
-def build(data="out/data", out="build/mw3ds.cia", no_data=False):
+def build(data="out/data", out="build/mw3ds.cia", no_data=False, set=""):
     """Builds the program and the CIA; returns the exit code."""
     mwtools.load_env()
     made = mwtools.make([], capture=True)
@@ -151,35 +161,68 @@ def build(data="out/data", out="build/mw3ds.cia", no_data=False):
         print(f"make failed (exit code {made.returncode}). Last lines of its output:")
         print("\n".join(lines[-30:]))
         return 1
-    return pack(data, out, no_data)
+    return pack(data, out, no_data, set)
 
 
-def pack(data="out/data", out="build/mw3ds.cia", no_data=False):
+def set_art(set, title):
+    """The set's SMDH, built with bannertool from tools/build/art/sets/<set>/icon.png (make_set_art.py);
+    (None, None) for the main title or a set without an icon of its own. The banner is not set's own: bannertool's
+    CBMD holds either a 3D CGFX or a flat picture, never both, so every set keeps the main banner's 3D scene
+    (pack passes banner.bnr with the Data Files tune in, which needs no bannertool at all)."""
+    if not set or set not in SETS:
+        return None, None
+    src = ROOT / "tools" / "build" / "art" / "sets" / set
+    if not (src / "icon.png").is_file():
+        print(f"set {set}: no {src / 'icon.png'} (run tools/build/make_set_art.py): the main title's art goes in")
+        return None, None
+    tools = mwtools.get_env("MW3DS_CTR_TOOLS_DIR", "the folder with bannertool")
+    bannertool = Path(tools) / ("bannertool.exe" if mwtools.IS_WINDOWS else "bannertool")
+    icon = ROOT / f"build/smdh-{set}.smdh"
+    if subprocess.run([str(bannertool), "makesmdh", "-s", title, "-l", title, "-p", "the mw3ds port",
+                       "-i", str(src / "icon.png"), "-o", str(icon)], capture_output=True).returncode != 0:
+        print(f"bannertool makesmdh failed: {icon} not built")
+        return None, None
+    return (icon if icon.is_file() else None), None
+
+
+def pack(data="out/data", out="build/mw3ds.cia", no_data=False, set=""):
     """Packs the program already built (mw3ds.elf and mw3ds.smdh in the repo root) and the data into the CIA;
-    returns the exit code. The release converter calls this with a prebuilt program (tools/release)."""
+    returns the exit code. The release converter calls this with a prebuilt program (tools/release). With a set
+    name (SETS), the CIA becomes that set's title: its own name, id and art, plus the set.txt the engine reads
+    to choose its data folder; the main title's own build stays untouched."""
     mwtools.load_env()
     for f in ("mw3ds.elf", "mw3ds.smdh"):
         if not (ROOT / f).is_file():
             print(f"{f} not found in {ROOT}: build the program first (tools/build/make.py)")
             return 1
+    defs = dict(DEFS)
+    if set:
+        if set not in SETS:
+            print(f"set {set} has no registered title id and art: packing it as the main title")
+        else:
+            defs["APP_TITLE"], defs["APP_PRODUCT_CODE"], defs["APP_UNIQUE_ID"] = SETS[set]
     staged = ROOT / "build" / "romfs" / "data"
     shutil.rmtree(staged, ignore_errors=True)
     # (the RSF's RomFs root: empty for the program-only CIA, which makerom wants to exist all the same)
     staged.parent.mkdir(parents=True, exist_ok=True)
     if not no_data:
         mwtools.copy_tree_linked(ROOT / data, staged)
+    if set and set in SETS:
+        (staged.parent / "set.txt").write_text(set + "\n", encoding="utf-8")
+    icon, banner = set_art(set, defs["APP_TITLE"])
     makerom_name = "makerom.exe" if mwtools.IS_WINDOWS else "makerom"
     makerom = Path(mwtools.get_env("MW3DS_CTR_TOOLS_DIR", f"the folder with {makerom_name}")) / makerom_name
     args = [str(makerom), "-f", "cia", "-o", str(out), "-elf", "mw3ds.elf", "-rsf", "tools/build/mw3ds.rsf",
-            "-icon", "mw3ds.smdh", "-banner", str(banner_with_tune(ROOT / "build" / "banner.bnr")), "-exefslogo",
-            "-target", "t"]
-    args += [f"-D{k}={v}" for k, v in DEFS.items()]
+            "-icon", str(icon or "mw3ds.smdh"), "-banner", str(banner or banner_with_tune(ROOT / "build" / "banner.bnr")),
+            "-exefslogo", "-target", "t"]
+    args += [f"-D{k}={v}" for k, v in defs.items()]
     ver, number = app_version()
     args += ["-ver", str(number)]
     print(f"version {ver}")
     code = subprocess.run(args, cwd=ROOT).returncode
-    # The staged copy of the data is only makerom's input: packed into the CIA, it would be a third 1 GB copy on disk
-    shutil.rmtree(staged, ignore_errors=True)
+    # The staged copy of the data is only makerom's input: packed into the CIA, it would be a third 1 GB copy on
+    # disk; set.txt goes with it, so the next pack starts from an empty RomFs root again
+    shutil.rmtree(staged.parent, ignore_errors=True)
     if code != 0:
         print("makerom failed")
         return 1
@@ -197,9 +240,10 @@ def main():
     ap.add_argument("--old3ds", action="store_true")
     ap.add_argument("--tribunal", action="store_true")
     ap.add_argument("--bloodmoon", action="store_true")
+    ap.add_argument("--set", default="", metavar="NAME", help="pack as a multi-set title: exp or tr (SETS; see build_tr_sdmc.py)")
     a = ap.parse_args()
     data, out = names(a.old3ds, a.tribunal, a.bloodmoon)
-    return (pack if a.prebuilt else build)(a.data or data, a.out or out, a.no_data)
+    return (pack if a.prebuilt else build)(a.data or data, a.out or out, a.no_data, a.set)
 
 
 if __name__ == "__main__":

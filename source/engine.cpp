@@ -35,6 +35,12 @@ extern "C" u32 __ctru_heap_size, __ctru_linear_heap_size;
 static const char* kSdDataDir = "sdmc:/3ds/mw3ds/data";
 static const char* kRomfsDataDir = "romfs:/data";
 
+// A multi-set card (build_tr_sdmc.py): the CIA's RomFS carries set.txt with its set's name ("tr", "exp"), and the
+// engine takes sdmc:/3ds/mw3ds/data-<set> when the card has it, the plain data folder otherwise. Two such CIAs, one
+// per set, sit side by side on the HOME menu (unique title ids and art) yet share saves and settings, which live in
+// sdmc:/3ds/mw3ds regardless of the data folder (so a TR save is still yours when the add-on set loads it first)
+static char setSdDataDir[] = "sdmc:/3ds/mw3ds/data-";
+
 // (inFormat: the render target's colour format, RGBA8, or RGB565 on an Old 3DS; outFormat: the screen's, RGB8, or
 // RGB565 on an Old 3DS: the transfer engine never signals the end of an RGB565 -> RGB8 copy on the console, and the
 // frame waits for it for ever (3dbrew, Transfer Engine; issue #43). Azahar and the native build signal any copy)
@@ -181,9 +187,29 @@ bool Engine::prepare()
 	rendererInit();
 	uiInit();
 	// A CIA with its data inside uses that (whatever an older copy left on the card); the dev build and
-	// the program-only CIA read the card's
-	dataDir = romfs && stat("romfs:/data/game.json", &st) == 0 ? kRomfsDataDir
-		: stat(kSdDataDir, &st) == 0 ? kSdDataDir : kRomfsDataDir;
+	// the program-only CIA read the card's; a set CIA reads its own data-<set> folder when the card has one
+	if (romfs)
+	{
+		FILE* setFile = fopen("romfs:/set.txt", "r");
+		char setName[24] = {0};
+		if (setFile && fgets(setName, sizeof setName, setFile) && setName[0] != '\n')
+		{
+			strtok(setName, "\r\n");                     // (the packing script writes one line)
+			strncat(setSdDataDir, setName, sizeof setSdDataDir - strlen(setSdDataDir) - 1);
+			if (stat(setSdDataDir, &st) == 0)
+			{
+				dataDir = setSdDataDir;
+				logf("set %s: data folder %s", setName, dataDir);
+			}
+			else
+				setSdDataDir[strlen("sdmc:/3ds/mw3ds/data")] = 0;      // (the card carries no such set: the plain folder)
+		}
+		if (setFile)
+			fclose(setFile);
+	}
+	if (!dataDir)
+		dataDir = romfs && stat("romfs:/data/game.json", &st) == 0 ? kRomfsDataDir
+			: stat(kSdDataDir, &st) == 0 ? kSdDataDir : kRomfsDataDir;
 	logf("romfs %s, data dir %s", romfs ? "mounted" : "absent", dataDir);
 	int maxTex = dataMaxTex(dataDir);
 	logf("data: textures up to %d texels%s", maxTex, maxTex ? "" : " (not recorded: converted before max_tex)");
