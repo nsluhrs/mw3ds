@@ -59,7 +59,7 @@ CFLAGS	:=	-g -Wall -O3 -flto=auto -fomit-frame-pointer -fno-math-errno -mword-re
 			-ffunction-sections \
 			$(ARCH)
 
-CFLAGS	+=	$(INCLUDE) -D__3DS__
+CFLAGS	+=	$(INCLUDE) -D__3DS__ -include platform/datastdio.hpp
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++20
 
@@ -221,6 +221,10 @@ $(OUTPUT).3dsx	:	$(OUTPUT).elf $(_3DSXDEPS)
 $(OUTPUT).smdh	:	$(TOPDIR)/$(BUILD)/version.txt
 
 $(OFILES_SOURCES) : $(HFILES)
+
+# (the fopen/stat redirect every engine file is force-included with (Makefile:62): its own name never appears
+# in a source, so the .d files cannot see it, and changing a macro here must rebuild every object)
+$(OFILES_SOURCES) : $(TOPDIR)/source/platform/datastdio.hpp
 
 $(OUTPUT).elf	:	$(OFILES)
 

@@ -16,6 +16,7 @@
 #include "engine.hpp"
 #include "mwsound/soundmanagerimp.hpp"
 #include "mwrender/objectpaging.hpp"
+#include "platform/dataarchive.hpp"
 #include "platform/linear.hpp"
 #include "platform/memstat.hpp"
 #include "components/debug/debuglog.hpp"
@@ -211,6 +212,9 @@ bool Engine::prepare()
 		dataDir = romfs && stat("romfs:/data/game.json", &st) == 0 ? kRomfsDataDir
 			: stat(kSdDataDir, &st) == 0 ? kSdDataDir : kRomfsDataDir;
 	logf("romfs %s, data dir %s", romfs ? "mounted" : "absent", dataDir);
+	// Packed card? That folder's data.idx and its parts answer every data open instead (platform/dataarchive.cpp)
+	if (dataArchiveTryLoad(dataDir))
+		logf("data: reading the packed archive, not loose files");
 	int maxTex = dataMaxTex(dataDir);
 	logf("data: textures up to %d texels%s", maxTex, maxTex ? "" : " (not recorded: converted before max_tex)");
 	// (not for a scripted test run: the native Old 3DS suite runs the New 3DS's data on purpose)

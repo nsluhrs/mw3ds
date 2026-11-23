@@ -25,6 +25,7 @@
 // ---- paths: sdmc:/3ds/mw3ds/... is NATIVE_SD (default build/native/sd); .../data is MW3DS_DATA (out/world ...)
 const char* nativePath(const char* path);
 FILE* native_fopen(const char* path, const char* mode);
+int native_fclose(FILE* f);
 int native_stat(const char* path, struct stat* st);
 int native_remove(const char* path);
 int native_rename(const char* from, const char* to);
@@ -46,7 +47,8 @@ inline int native_remove_dispatch(const char* p) { return native_remove(p); }
 #undef F_TLOCK
 #undef F_TEST
 #define fopen(p, m) native_fopen(p, m)
-#define stat(p, s) native_stat(p, s)
+#define fclose(f) native_fclose(f)
+#define stat(p, s) native_stat(p, s)   // (and that asks the card's data archive: platform/dataarchive.cpp)
 #define remove(...) native_remove_dispatch(__VA_ARGS__)
 #define rename(a, b) native_rename(a, b)
 #define mkdir(p, m) native_mkdir(p, m)

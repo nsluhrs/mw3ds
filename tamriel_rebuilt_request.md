@@ -72,6 +72,20 @@ ships as a **program-only CIA (~2 MB) plus the data on the card** — the engine
 
     python tools/build/build_tr_sdmc.py            # build/mw3ds-tr-sdmc.cia + build/tr-sdmc/3ds to put on the card
 
+### Reading it fast: the packed set
+
+Staged file by file, that folder is why the card install lags where a RomFS CIA does not: 84,000 cells,
+textures, sounds and book pages are a fresh FAT open each, on a card whose free space is fragmented.
+`tools/build/pack_sdmc.py` packs the same names and the same bytes into three big files plus an index —
+a part stays under 2 GB because devkitARM's stdio positions are a 32-bit `long` — and
+`source/platform/dataarchive.cpp` answers `fopen` and `stat` for a packed folder out of that index:
+each entry reaches its reader as a cookie stream (the trick `zfile.cpp` uses for compressed files), so a
+caller's `fseek(f, 0, SEEK_SET)`, `fseek(f, -4, SEEK_END)` and `ftell(f)` see the entry rather than the
+image holding it and no reader in the engine had to change. Reads go through handles opened on the parts
+once at boot, buffered 64 KB. `build_tr_sdmc.py` stages that form by default (`--loose` stages the tree,
+and a folder without an index is still read the old way), so the copy to the card is minutes instead of an
+hour and lands unfragmented by construction.
+
 ## Proof so far (native PC test build, data `out/tr`)
 
 - **All-cells sweep** (`tools/test/visit_all.py`, 12,528 cells — every grid square and every reachable

@@ -38,6 +38,7 @@
 #include <3ds.h>
 #include <citro3d.h>
 #include "mwsound/soundmanagerimp.hpp"
+#include "platform/dataarchive.hpp"
 #include "platform/linear.hpp"
 #include "components/debug/debuglog.hpp"
 
@@ -90,12 +91,29 @@ const char* nativePath(const char* path)
 	return s_mapped.c_str();
 }
 
-FILE* native_fopen(const char* path, const char* mode)
+// The opens below the archive redirect: the real libc with the card path mapped (platform/dataarchive.cpp's
+// fallback, and everything that is not a data path).
+FILE* native_realOpen(const char* path, const char* mode)
 {
 	return ::fopen(nativePath(path), mode);
 }
 
+FILE* native_fopen(const char* path, const char* mode)
+{
+	return archFopen(path, mode);   // (the card's data archive first, the mapped files under it)
+}
+
+int native_fclose(FILE* f)
+{
+	return archFclose(f);           // (a borrowed handle from the archive's pool is handed back, not closed)
+}
+
 int native_stat(const char* path, struct stat* st)
+{
+	return archStat(path, st);      // (the card's data archive first, the mapped files under it)
+}
+
+int native_realStat(const char* path, struct stat* st)
 {
 	std::string p = nativePath(path);
 	while (p.size() > 1 && (p.back() == '/' || p.back() == '\\'))
